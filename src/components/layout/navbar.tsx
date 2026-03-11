@@ -61,6 +61,17 @@ export const Navbar = () => {
 
         <div className="text-xs text-slate-500">{getBreadcrumb()}</div>
 
+        {isHome && (
+          <>
+            <Button variant="primary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-proponi'))}>
+              Proponi un'idea
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-proposte'))}>
+              Proposte
+            </Button>
+          </>
+        )}
+
         {user && (
           <div className="flex items-center gap-3 ml-4">
             {user.photoURL ? (

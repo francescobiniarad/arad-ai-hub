@@ -23,6 +23,7 @@ import type {
   Workshop,
   AIOffering,
   UpdateLogEntry,
+  Proposal,
 } from '../types';
 
 // Collection names
@@ -34,6 +35,7 @@ const COLLECTIONS = {
   workshops: 'workshops',
   aiOfferings: 'ai_offerings',
   updatesLog: 'updates_log',
+  proposals: 'proposals',
 } as const;
 
 // Log a change to the audit trail
@@ -274,6 +276,39 @@ export const saveAIOffering = async (offering: AIOffering): Promise<void> => {
     await setDoc(docRef, data);
     await logChange(COLLECTIONS.aiOfferings, offering.id, 'created', null, data);
   }
+};
+
+// Proposals
+export const saveProposal = async (proposal: Omit<Proposal, 'id' | 'createdAt'>): Promise<void> => {
+  await addDoc(collection(db, COLLECTIONS.proposals), {
+    ...proposal,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToProposals = (
+  callback: (proposals: Proposal[]) => void
+): (() => void) => {
+  const q = query(collection(db, COLLECTIONS.proposals), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+    const proposals = snapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        titolo: data.titolo,
+        descrizione: data.descrizione,
+        perche: data.perche,
+        asIs: data.asIs,
+        toBe: data.toBe,
+        streamId: data.streamId,
+        roi: data.roi,
+        tipologia: data.tipologia,
+        email: data.email,
+        createdAt: (data.createdAt as Timestamp)?.toDate(),
+      };
+    }) as Proposal[];
+    callback(proposals);
+  });
 };
 
 // Updates Log

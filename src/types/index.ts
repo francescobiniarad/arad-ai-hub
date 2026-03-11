@@ -92,6 +92,21 @@ export interface UpdateLogEntry {
   reason?: string;
 }
 
+// Proposal (idea submitted by any team member)
+export interface Proposal {
+  id: string;
+  titolo: string;
+  descrizione: string;
+  perche: string;
+  asIs: string;
+  toBe: string;
+  streamId: string | null;
+  roi: string;
+  tipologia: string;
+  email: string;
+  createdAt?: Date;
+}
+
 // User (from Firebase Auth)
 export interface AppUser {
   uid: string;
