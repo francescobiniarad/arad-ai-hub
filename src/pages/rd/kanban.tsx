@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button, Modal, Input, Textarea, Select } from '../../components/ui';
 import { PlusIcon, TrashIcon, EditIcon, ChevronDownIcon, ChevronRightIcon } from '../../components/icons';
-import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea } from '../../services/firestore';
+import { subscribeToStreams, subscribeToIdeas, saveStream, deleteStream, saveIdea, deleteIdea } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
 import type { Stream, Idea, KanbanColumnId } from '../../types';
 import toast from 'react-hot-toast';
@@ -157,6 +157,31 @@ export const KanbanPage = () => {
     }
   };
 
+  const handleDeleteStream = async (streamId: string, streamName: string) => {
+    const streamIdeas = ideas.filter((i) => i.streamId === streamId);
+    const subsCount = streams.find((s) => s.id === streamId)?.substreams.length ?? 0;
+
+    const parts = [];
+    if (subsCount > 0) parts.push(`${subsCount} substream(s)`);
+    if (streamIdeas.length > 0) parts.push(`${streamIdeas.length} idea(s)`);
+    const detail = parts.length > 0 ? ` and its ${parts.join(' and ')}` : '';
+
+    if (!window.confirm(`Delete stream "${streamName}"${detail}?`)) return;
+
+    setStreams((prev) => prev.filter((s) => s.id !== streamId));
+    setIdeas((prev) => prev.filter((i) => i.streamId !== streamId));
+
+    try {
+      await deleteStream(streamId);
+      for (const idea of streamIdeas) {
+        await deleteIdea(idea.id);
+      }
+      toast.success('Stream deleted');
+    } catch {
+      toast.error('Failed to delete stream');
+    }
+  };
+
   const toggle = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   if (loading) {
@@ -277,6 +302,14 @@ export const KanbanPage = () => {
                     >
                       <PlusIcon size={12} />
                     </Button>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleDeleteStream(st.id, st.name)}
+                      className="text-red-500/30 hover:text-red-500 p-1 transition-colors"
+                      title="Delete stream"
+                    >
+                      <TrashIcon size={12} />
+                    </button>
                   </div>
                   {!hasSubs && KANBAN_COLUMNS.map((col) => (
                     <KanbanCell

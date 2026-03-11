@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Button, Modal, Input, Textarea, Select } from '../../components/ui';
 import { PlusIcon, TrashIcon } from '../../components/icons';
 import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea } from '../../services/firestore';
@@ -347,7 +347,7 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
   );
 };
 
-const Label = ({ children }: { children: React.ReactNode }) => (
+const Label = ({ children }: { children: ReactNode }) => (
   <label className="block text-[10px] text-slate-500 uppercase tracking-wider mb-1">
     {children}
   </label>

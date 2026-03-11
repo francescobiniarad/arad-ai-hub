@@ -16,9 +16,14 @@ import { KanbanPage } from './pages/rd/kanban';
 import { TabellaPage } from './pages/rd/tabella';
 import { OfferingPage } from './pages/offering';
 
+const USE_EMULATORS = import.meta.env.VITE_USE_EMULATORS === 'true';
+
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+
+  // Skip auth in local emulator mode
+  if (USE_EMULATORS) return <>{children}</>;
 
   if (loading) {
     return (

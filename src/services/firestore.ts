@@ -77,6 +77,13 @@ export const subscribeToStreams = (
   });
 };
 
+export const deleteStream = async (streamId: string): Promise<void> => {
+  const docRef = doc(db, COLLECTIONS.streams, streamId);
+  const existing = await getDoc(docRef);
+  await deleteDoc(docRef);
+  await logChange(COLLECTIONS.streams, streamId, 'deleted', existing.data(), null);
+};
+
 export const saveStream = async (stream: Stream): Promise<void> => {
   const docRef = doc(db, COLLECTIONS.streams, stream.id);
   const existing = await getDoc(docRef);
