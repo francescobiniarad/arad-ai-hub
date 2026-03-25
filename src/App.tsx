@@ -11,10 +11,12 @@ import { CertificazioniPage } from './pages/formazione/certificazioni';
 import { WorkshopPage } from './pages/formazione/workshop';
 import { PracticalPage } from './pages/formazione/practical';
 import { NewsPage, GamificationPage } from './pages/formazione/placeholder';
+import { MaterialiPage } from './pages/formazione/materiali';
 import { RDPage } from './pages/rd';
 import { KanbanPage } from './pages/rd/kanban';
 import { TabellaPage } from './pages/rd/tabella';
 import { OfferingPage } from './pages/offering';
+import { PropostePage } from './pages/proposte';
 
 const USE_EMULATORS = import.meta.env.VITE_USE_EMULATORS === 'true';
 
@@ -43,7 +45,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Main layout with navbar
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen bg-dark-bg">
+    <div className="min-h-screen bg-brand-bg">
       <Navbar />
       <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
     </div>
@@ -53,7 +55,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 // Kanban layout (wider)
 const KanbanLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen bg-dark-bg">
+    <div className="min-h-screen bg-brand-bg">
       <Navbar />
       <main className="px-3 py-6">{children}</main>
     </div>
@@ -125,6 +127,16 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/formazione/materiali"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MaterialiPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/formazione/news"
         element={
           <ProtectedRoute>
@@ -184,6 +196,18 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <Layout>
               <OfferingPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Proposte */}
+      <Route
+        path="/proposte"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PropostePage />
             </Layout>
           </ProtectedRoute>
         }

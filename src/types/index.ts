@@ -107,6 +107,13 @@ export interface Proposal {
   createdAt?: Date;
 }
 
+// Materiale Utile (useful materials with links)
+export interface MaterialeUtile {
+  id: string;
+  url: string;
+  descrizione: string;
+}
+
 // User (from Firebase Auth)
 export interface AppUser {
   uid: string;

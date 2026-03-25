@@ -22,7 +22,7 @@ const items = [
 export const RDPage = () => {
   return (
     <div className="animate-fade-in">
-      <h1 className="font-mono text-3xl font-bold mb-8">R&D</h1>
+      <h1 className="font-heading text-3xl mb-8">R&D</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {items.map((item, index) => (
@@ -38,8 +38,8 @@ export const RDPage = () => {
               <div className="mb-3" style={{ color: item.color }}>
                 {item.icon}
               </div>
-              <h3 className="font-mono text-lg mb-2">{item.label}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+              <h3 className="font-heading text-lg mb-2">{item.label}</h3>
+              <p className="text-brand-muted text-sm leading-relaxed">{item.desc}</p>
             </Card>
           </Link>
         ))}

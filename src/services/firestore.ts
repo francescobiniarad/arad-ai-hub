@@ -24,6 +24,7 @@ import type {
   AIOffering,
   UpdateLogEntry,
   Proposal,
+  MaterialeUtile,
 } from '../types';
 
 // Collection names
@@ -36,6 +37,7 @@ const COLLECTIONS = {
   aiOfferings: 'ai_offerings',
   updatesLog: 'updates_log',
   proposals: 'proposals',
+  materialiUtili: 'materiali_utili',
 } as const;
 
 // Log a change to the audit trail
@@ -67,16 +69,21 @@ const logChange = async (
 
 // Streams
 export const subscribeToStreams = (
-  callback: (streams: Stream[]) => void
+  callback: (streams: Stream[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.streams));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const streams = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Stream[];
-    callback(streams);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const streams = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Stream[];
+      callback(streams);
+    },
+    (error) => {
+      console.error('subscribeToStreams error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const deleteStream = async (streamId: string): Promise<void> => {
@@ -92,7 +99,7 @@ export const saveStream = async (stream: Stream): Promise<void> => {
   const data = { name: stream.name, leader: stream.leader, substreams: stream.substreams };
 
   if (existing.exists()) {
-    await setDoc(docRef, data);
+    await setDoc(docRef, data, { merge: true });
     await logChange(COLLECTIONS.streams, stream.id, 'updated', existing.data(), data);
   } else {
     await setDoc(docRef, data);
@@ -102,16 +109,21 @@ export const saveStream = async (stream: Stream): Promise<void> => {
 
 // Ideas
 export const subscribeToIdeas = (
-  callback: (ideas: Idea[]) => void
+  callback: (ideas: Idea[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.ideas));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const ideas = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Idea[];
-    callback(ideas);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const ideas = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Idea[];
+      callback(ideas);
+    },
+    (error) => {
+      console.error('subscribeToIdeas error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const saveIdea = async (idea: Idea): Promise<void> => {
@@ -129,7 +141,7 @@ export const saveIdea = async (idea: Idea): Promise<void> => {
   };
 
   if (existing.exists()) {
-    await setDoc(docRef, data);
+    await setDoc(docRef, data, { merge: true });
     await logChange(COLLECTIONS.ideas, idea.id, 'updated', existing.data(), data);
   } else {
     await setDoc(docRef, data);
@@ -146,16 +158,21 @@ export const deleteIdea = async (ideaId: string): Promise<void> => {
 
 // Certifications
 export const subscribeToCertifications = (
-  callback: (certs: Certification[]) => void
+  callback: (certs: Certification[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.certifications));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const certs = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Certification[];
-    callback(certs);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const certs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Certification[];
+      callback(certs);
+    },
+    (error) => {
+      console.error('subscribeToCertifications error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const saveCertification = async (cert: Certification): Promise<void> => {
@@ -179,16 +196,21 @@ export const deleteCertification = async (certId: string): Promise<void> => {
 
 // Practical Sessions
 export const subscribeToPracticalSessions = (
-  callback: (sessions: PracticalSession[]) => void
+  callback: (sessions: PracticalSession[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.practicalSessions));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const sessions = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as PracticalSession[];
-    callback(sessions);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const sessions = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as PracticalSession[];
+      callback(sessions);
+    },
+    (error) => {
+      console.error('subscribeToPracticalSessions error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const savePracticalSession = async (session: PracticalSession): Promise<void> => {
@@ -212,16 +234,21 @@ export const deletePracticalSession = async (sessionId: string): Promise<void> =
 
 // Workshops
 export const subscribeToWorkshops = (
-  callback: (workshops: Workshop[]) => void
+  callback: (workshops: Workshop[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.workshops));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const workshops = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Workshop[];
-    callback(workshops);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const workshops = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Workshop[];
+      callback(workshops);
+    },
+    (error) => {
+      console.error('subscribeToWorkshops error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const saveWorkshop = async (workshop: Workshop): Promise<void> => {
@@ -244,16 +271,21 @@ export const deleteWorkshop = async (workshopId: string): Promise<void> => {
 
 // AI Offerings
 export const subscribeToAIOfferings = (
-  callback: (offerings: AIOffering[]) => void
+  callback: (offerings: AIOffering[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.aiOfferings));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const offerings = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as AIOffering[];
-    callback(offerings);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const offerings = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as AIOffering[];
+      callback(offerings);
+    },
+    (error) => {
+      console.error('subscribeToAIOfferings error:', error);
+      onError?.(error);
+    }
+  );
 };
 
 export const saveAIOffering = async (offering: AIOffering): Promise<void> => {
@@ -270,7 +302,7 @@ export const saveAIOffering = async (offering: AIOffering): Promise<void> => {
   };
 
   if (existing.exists()) {
-    await setDoc(docRef, data);
+    await setDoc(docRef, data, { merge: true });
     await logChange(COLLECTIONS.aiOfferings, offering.id, 'updated', existing.data(), data);
   } else {
     await setDoc(docRef, data);
@@ -287,54 +319,104 @@ export const saveProposal = async (proposal: Omit<Proposal, 'id' | 'createdAt'>)
 };
 
 export const subscribeToProposals = (
-  callback: (proposals: Proposal[]) => void
+  callback: (proposals: Proposal[]) => void,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(collection(db, COLLECTIONS.proposals), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const proposals = snapshot.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        titolo: data.titolo,
-        descrizione: data.descrizione,
-        perche: data.perche,
-        asIs: data.asIs,
-        toBe: data.toBe,
-        streamId: data.streamId,
-        roi: data.roi,
-        tipologia: data.tipologia,
-        email: data.email,
-        createdAt: (data.createdAt as Timestamp)?.toDate(),
-      };
-    }) as Proposal[];
-    callback(proposals);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const proposals = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          titolo: data.titolo,
+          descrizione: data.descrizione,
+          perche: data.perche,
+          asIs: data.asIs,
+          toBe: data.toBe,
+          streamId: data.streamId,
+          roi: data.roi,
+          tipologia: data.tipologia,
+          email: data.email,
+          createdAt: (data.createdAt as Timestamp)?.toDate(),
+        };
+      }) as Proposal[];
+      callback(proposals);
+    },
+    (error) => {
+      console.error('subscribeToProposals error:', error);
+      onError?.(error);
+    }
+  );
+};
+
+// Materiali Utili
+export const subscribeToMaterialiUtili = (
+  callback: (materiali: MaterialeUtile[]) => void,
+  onError?: (error: Error) => void
+): (() => void) => {
+  const q = query(collection(db, COLLECTIONS.materialiUtili));
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const materiali = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as MaterialeUtile[];
+      callback(materiali);
+    },
+    (error) => {
+      console.error('subscribeToMaterialiUtili error:', error);
+      onError?.(error);
+    }
+  );
+};
+
+export const saveMaterialeUtile = async (materiale: MaterialeUtile): Promise<void> => {
+  const docRef = doc(db, COLLECTIONS.materialiUtili, materiale.id);
+  const data = { url: materiale.url, descrizione: materiale.descrizione };
+  await setDoc(docRef, data, { merge: true });
+};
+
+export const deleteMaterialeUtile = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.materialiUtili, id));
+  } catch (error) {
+    console.error('deleteMaterialeUtile error:', error);
+    throw error;
+  }
 };
 
 // Updates Log
 export const subscribeToUpdatesLog = (
   callback: (entries: UpdateLogEntry[]) => void,
-  limitCount = 100
+  limitCount = 100,
+  onError?: (error: Error) => void
 ): (() => void) => {
   const q = query(
     collection(db, COLLECTIONS.updatesLog),
     orderBy('timestamp', 'desc')
   );
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const entries = snapshot.docs.slice(0, limitCount).map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        timestamp: (data.timestamp as Timestamp)?.toDate() || new Date(),
-        userEmail: data.userEmail,
-        collection: data.collection,
-        documentId: data.documentId,
-        fieldChanged: data.fieldChanged,
-        oldValue: data.oldValue,
-        newValue: data.newValue,
-        reason: data.reason,
-      };
-    }) as UpdateLogEntry[];
-    callback(entries);
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      const entries = snapshot.docs.slice(0, limitCount).map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          timestamp: (data.timestamp as Timestamp)?.toDate() || new Date(),
+          userEmail: data.userEmail,
+          collection: data.collection,
+          documentId: data.documentId,
+          fieldChanged: data.fieldChanged,
+          oldValue: data.oldValue,
+          newValue: data.newValue,
+          reason: data.reason,
+        };
+      }) as UpdateLogEntry[];
+      callback(entries);
+    },
+    (error) => {
+      console.error('subscribeToUpdatesLog error:', error);
+      onError?.(error);
+    }
+  );
 };

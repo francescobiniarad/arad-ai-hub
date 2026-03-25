@@ -1,36 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
 @layer base {
   html {
     @apply scroll-smooth;
   }
 
   body {
-    @apply bg-dark-bg text-slate-200 antialiased;
+    font-family: 'Outfit', system-ui, sans-serif;
+    background-color: #FAFAFB;
+    color: #4A4A4A;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom scrollbar */
   ::-webkit-scrollbar {
     @apply w-1.5 h-1.5;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-800;
+    background: #F0F2F5;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-600 rounded;
+    background: #C5A028;
+    border-radius: 4px;
+    opacity: 0.4;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500;
+    opacity: 0.7;
   }
 }
 
-/* Custom utilities */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out forwards;
@@ -47,27 +52,28 @@
     }
   }
 
-  /* Grid background pattern */
-  .grid-bg {
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      rgba(99, 102, 241, 0.07) 1px,
-      transparent 0
-    );
-    background-size: 32px 32px;
+  .font-heading {
+    font-family: 'Marcellus', 'Optima', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #1A1B1F;
+  }
+
+  .glass-nav {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(197, 160, 40, 0.2);
   }
 }
 
-/* Component layer */
 @layer components {
-  /* Post-it hover effect for Kanban cards */
   .postit {
     @apply cursor-grab transition-transform duration-150;
   }
 
   .postit:hover {
     @apply scale-105 -rotate-1;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   }
 
   .postit:active {

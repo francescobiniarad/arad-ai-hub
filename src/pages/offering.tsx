@@ -57,7 +57,7 @@ export const OfferingPage = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-slate-500 py-12">Loading...</div>;
+    return <div className="text-center text-brand-muted py-12">Loading...</div>;
   }
 
   const matrixData = data.map((d) => ({
@@ -72,20 +72,20 @@ export const OfferingPage = () => {
   return (
     <div className="animate-fade-in">
       <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <h1 className="font-mono text-2xl font-bold">AI Offering Decision Sheet</h1>
-        <div className="flex gap-1 bg-slate-800/60 rounded-lg p-0.5">
+        <h1 className="font-heading text-2xl">AI Offering Decision Sheet</h1>
+        <div className="flex gap-1 bg-brand-ice rounded-sm p-0.5">
           <button
             onClick={() => setView('table')}
-            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              view === 'table' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`px-4 py-1.5 rounded-sm text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+              view === 'table' ? 'bg-brand-gold text-white' : 'text-brand-muted hover:text-brand-body'
             }`}
           >
             Tabella
           </button>
           <button
             onClick={() => setView('matrix')}
-            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              view === 'matrix' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`px-4 py-1.5 rounded-sm text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+              view === 'matrix' ? 'bg-brand-gold text-white' : 'text-brand-muted hover:text-brand-body'
             }`}
           >
             Matrice
@@ -121,11 +121,11 @@ const OfferTable = ({ data, expandedId, setExpandedId, onUpdateLocal, onSave }: 
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr>
+          <tr className="border-b border-gray-200">
             {['Stream', 'Titolo', 'Sforzo', 'Appetibilità', 'Score', 'Note AM'].map((h) => (
               <th
                 key={h}
-                className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-primary-300 whitespace-nowrap"
+                className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5 whitespace-nowrap"
               >
                 {h}
               </th>
@@ -143,27 +143,27 @@ const OfferTable = ({ data, expandedId, setExpandedId, onUpdateLocal, onSave }: 
                 <tr
                   key={r.id}
                   onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                  className={`cursor-pointer border-b border-slate-700/30 ${
-                    isExpanded ? 'bg-primary-500/5' : 'hover:bg-primary-500/5'
+                  className={`cursor-pointer border-b border-gray-100 ${
+                    isExpanded ? 'bg-brand-ice' : 'hover:bg-brand-ice'
                   }`}
                 >
                   <td className="px-3 py-3 border-l-[3px]" style={{ borderLeftColor: color }}>
                     <span
-                      className="text-[11px] font-semibold px-2.5 py-1 rounded"
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-sm"
                       style={{ background: `${color}22`, color }}
                     >
                       {r.stream}
                     </span>
                   </td>
-                  <td className="px-3 py-3 font-semibold max-w-[300px]">{r.title}</td>
+                  <td className="px-3 py-3 font-semibold text-brand-title max-w-[300px]">{r.title}</td>
                   <td className="px-3 py-3">
                     <span
-                      className={`px-2.5 py-1 rounded font-bold ${
+                      className={`px-2.5 py-1 rounded-sm font-bold text-xs ${
                         r.sforzo > 7
-                          ? 'bg-red-500/20 text-red-400'
+                          ? 'bg-red-500/10 text-red-600'
                           : r.sforzo > 5
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-green-500/20 text-green-400'
+                          ? 'bg-yellow-500/10 text-yellow-600'
+                          : 'bg-green-500/10 text-green-600'
                       }`}
                     >
                       {r.sforzo}
@@ -171,12 +171,12 @@ const OfferTable = ({ data, expandedId, setExpandedId, onUpdateLocal, onSave }: 
                   </td>
                   <td className="px-3 py-3">
                     <span
-                      className={`px-2.5 py-1 rounded font-bold ${
+                      className={`px-2.5 py-1 rounded-sm font-bold text-xs ${
                         r.appetibilita >= 8
-                          ? 'bg-green-500/20 text-green-400'
+                          ? 'bg-green-500/10 text-green-600'
                           : r.appetibilita >= 6
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-red-500/20 text-red-400'
+                          ? 'bg-yellow-500/10 text-yellow-600'
+                          : 'bg-red-500/10 text-red-600'
                       }`}
                     >
                       {r.appetibilita}
@@ -186,10 +186,10 @@ const OfferTable = ({ data, expandedId, setExpandedId, onUpdateLocal, onSave }: 
                     <span
                       className={`font-mono font-bold text-base ${
                         parseFloat(score) >= 12
-                          ? 'text-green-400'
+                          ? 'text-green-600'
                           : parseFloat(score) >= 9
-                          ? 'text-yellow-400'
-                          : 'text-red-400'
+                          ? 'text-yellow-600'
+                          : 'text-red-600'
                       }`}
                     >
                       {score}
@@ -212,7 +212,7 @@ const OfferTable = ({ data, expandedId, setExpandedId, onUpdateLocal, onSave }: 
                 {isExpanded && (
                   <tr key={`${r.id}-detail`}>
                     <td colSpan={6} className="px-3 pb-4">
-                      <div className="bg-slate-900/50 rounded-xl p-5 mt-1 grid grid-cols-2 gap-4">
+                      <div className="bg-brand-bg rounded-sm border border-gray-200 p-5 mt-1 grid grid-cols-2 gap-4">
                         <div>
                           <Label>Descrizione</Label>
                           <Textarea
@@ -293,10 +293,10 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
   const tY = (v: number) => H - P - (v / 10) * (H - P * 2);
 
   return (
-    <div className="bg-slate-800/40 rounded-2xl p-6 overflow-hidden">
+    <div className="bg-brand-ice rounded-sm border border-gray-200 p-6 overflow-hidden">
       <div className="flex gap-4 mb-4 flex-wrap">
         {Object.entries(STREAM_COLORS).map(([name, color]) => (
-          <div key={name} className="flex items-center gap-2 text-xs text-slate-400">
+          <div key={name} className="flex items-center gap-2 text-xs text-brand-muted">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
             {name}
           </div>
@@ -312,39 +312,39 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
           <rect x={tX(0)} y={tY(5)} width={tX(5) - tX(0)} height={tY(0) - tY(5)} fill="rgba(239,68,68,0.04)" />
 
           {/* Quadrant labels */}
-          <text x={tX(7.5)} y={tY(9.3)} fill="#4ADE80" fontSize="11" textAnchor="middle" opacity="0.6" fontWeight="700">
+          <text x={tX(7.5)} y={tY(9.3)} fill="#16A34A" fontSize="11" textAnchor="middle" opacity="0.7" fontWeight="700">
             🎯 GO
           </text>
-          <text x={tX(2.5)} y={tY(9.3)} fill="#FBBF24" fontSize="11" textAnchor="middle" opacity="0.6" fontWeight="700">
+          <text x={tX(2.5)} y={tY(9.3)} fill="#D97706" fontSize="11" textAnchor="middle" opacity="0.7" fontWeight="700">
             ⚠️ VALUTA
           </text>
-          <text x={tX(7.5)} y={tY(0.8)} fill="#94A3B8" fontSize="10" textAnchor="middle" opacity="0.4">
+          <text x={tX(7.5)} y={tY(0.8)} fill="#6B7280" fontSize="10" textAnchor="middle" opacity="0.5">
             FACILE MA BASSA APP.
           </text>
-          <text x={tX(2.5)} y={tY(0.8)} fill="#F87171" fontSize="10" textAnchor="middle" opacity="0.4">
+          <text x={tX(2.5)} y={tY(0.8)} fill="#DC2626" fontSize="10" textAnchor="middle" opacity="0.5">
             ❌ SKIP
           </text>
 
           {/* Grid lines */}
           {[0, 2, 4, 5, 6, 8, 10].map((v) => (
             <g key={v}>
-              <line x1={tX(v)} y1={tY(0)} x2={tX(v)} y2={tY(10)} stroke="rgba(99,102,241,0.08)" />
-              <line x1={tX(0)} y1={tY(v)} x2={tX(10)} y2={tY(v)} stroke="rgba(99,102,241,0.08)" />
+              <line x1={tX(v)} y1={tY(0)} x2={tX(v)} y2={tY(10)} stroke="rgba(197,160,40,0.1)" />
+              <line x1={tX(0)} y1={tY(v)} x2={tX(10)} y2={tY(v)} stroke="rgba(197,160,40,0.1)" />
             </g>
           ))}
 
           {/* Axes */}
-          <line x1={tX(0)} y1={tY(0)} x2={tX(10)} y2={tY(0)} stroke="#475569" strokeWidth="1.5" />
-          <line x1={tX(0)} y1={tY(0)} x2={tX(0)} y2={tY(10)} stroke="#475569" strokeWidth="1.5" />
+          <line x1={tX(0)} y1={tY(0)} x2={tX(10)} y2={tY(0)} stroke="#D1D5DB" strokeWidth="1.5" />
+          <line x1={tX(0)} y1={tY(0)} x2={tX(0)} y2={tY(10)} stroke="#D1D5DB" strokeWidth="1.5" />
 
           {/* Axis labels */}
-          <text x={tX(5)} y={H - 8} fill="#94A3B8" fontSize="12" textAnchor="middle" fontWeight="600">
+          <text x={tX(5)} y={H - 8} fill="#A0A0A0" fontSize="12" textAnchor="middle" fontWeight="600">
             Fattibilità (10 - Sforzo) →
           </text>
           <text
             x={12}
             y={tY(5)}
-            fill="#94A3B8"
+            fill="#A0A0A0"
             fontSize="12"
             textAnchor="middle"
             fontWeight="600"
@@ -356,10 +356,10 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
           {/* Axis values */}
           {[0, 2, 4, 6, 8, 10].map((v) => (
             <g key={v}>
-              <text x={tX(v)} y={H - P + 18} fill="#64748B" fontSize="10" textAnchor="middle">
+              <text x={tX(v)} y={H - P + 18} fill="#A0A0A0" fontSize="10" textAnchor="middle">
                 {v}
               </text>
-              <text x={P - 10} y={tY(v) + 4} fill="#64748B" fontSize="10" textAnchor="end">
+              <text x={P - 10} y={tY(v) + 4} fill="#A0A0A0" fontSize="10" textAnchor="end">
                 {v}
               </text>
             </g>
@@ -382,7 +382,7 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
                   r={isHov ? 10 : 7}
                   fill={color}
                   opacity={isHov ? 1 : 0.75}
-                  stroke={isHov ? 'white' : 'none'}
+                  stroke={isHov ? '#C5A028' : 'none'}
                   strokeWidth="2"
                   style={{ transition: 'all 0.2s' }}
                 />
@@ -393,14 +393,14 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
                       y={tY(d.y) - 36}
                       width={Math.min(d.title.length * 6.5 + 20, 260)}
                       height="48"
-                      rx="6"
-                      fill="#1E293B"
-                      stroke="rgba(99,102,241,0.3)"
+                      rx="4"
+                      fill="#FFFFFF"
+                      stroke="rgba(197,160,40,0.3)"
                     />
-                    <text x={tX(d.x) + 24} y={tY(d.y) - 18} fill="#E2E8F0" fontSize="11" fontWeight="600">
+                    <text x={tX(d.x) + 24} y={tY(d.y) - 18} fill="#1A1B1F" fontSize="11" fontWeight="600">
                       {d.title.length > 38 ? d.title.slice(0, 38) + '...' : d.title}
                     </text>
-                    <text x={tX(d.x) + 24} y={tY(d.y) - 3} fill="#94A3B8" fontSize="10">
+                    <text x={tX(d.x) + 24} y={tY(d.y) - 3} fill="#A0A0A0" fontSize="10">
                       {d.noteAM}
                     </text>
                   </g>
@@ -415,7 +415,7 @@ const DecisionMatrix = ({ data }: { data: MatrixPoint[] }) => {
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-[10px] text-primary-500 uppercase tracking-wider font-semibold">
+  <label className="block text-[10px] text-brand-gold uppercase tracking-wider font-semibold">
     {children}
   </label>
 );

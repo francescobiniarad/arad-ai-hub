@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Button, Modal, Input, Textarea, Select } from '../../components/ui';
-import { PlusIcon, TrashIcon, EditIcon, ChevronDownIcon, ChevronRightIcon } from '../../components/icons';
+import { useState, useEffect, useRef } from 'react';
+import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui';
+import { PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from '../../components/icons';
 import { subscribeToStreams, subscribeToIdeas, saveStream, deleteStream, saveIdea, deleteIdea } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
 import type { Stream, Idea, KanbanColumnId } from '../../types';
@@ -36,35 +36,53 @@ export const KanbanPage = () => {
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [modalType, setModalType] = useState<'idea' | 'stream' | 'substream' | 'editIdea' | null>(null);
+  const [modalType, setModalType] = useState<'idea' | 'stream' | 'substream' | null>(null);
   const [substreamParent, setSubstreamParent] = useState<string | null>(null);
+  const [confirmDeleteIdeaId, setConfirmDeleteIdeaId] = useState<string | null>(null);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedIdeaId) {
+      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+  }, [selectedIdeaId]);
 
   useEffect(() => {
     let seeded = false;
+    setLoading(false); // Show initial data immediately; Firestore data replaces it on arrival
 
-    const unsubStreams = subscribeToStreams(async (data) => {
-      if (data.length > 0) {
-        setStreams(data);
-      } else if (!seeded) {
-        // Firestore is empty - seed with initial data
-        seeded = true;
-        for (const stream of INITIAL_STREAMS) {
-          await saveStream(stream);
+    const unsubStreams = subscribeToStreams(
+      async (data) => {
+        if (data.length > 0) {
+          setStreams(data);
+        } else if (!seeded) {
+          seeded = true;
+          for (const stream of INITIAL_STREAMS) {
+            await saveStream(stream);
+          }
         }
+      },
+      (error) => {
+        console.error('Kanban streams error:', error);
+        toast.error('Errore nel caricamento degli stream');
       }
-      setLoading(false);
-    });
+    );
 
-    const unsubIdeas = subscribeToIdeas(async (data) => {
-      if (data.length > 0) {
-        setIdeas(data);
-      } else if (!seeded) {
-        // Firestore is empty - seed with initial ideas
-        for (const idea of INITIAL_IDEAS) {
-          await saveIdea(idea);
+    const unsubIdeas = subscribeToIdeas(
+      async (data) => {
+        if (data.length > 0) {
+          setIdeas(data);
+        } else if (!seeded) {
+          for (const idea of INITIAL_IDEAS) {
+            await saveIdea(idea);
+          }
         }
+      },
+      (error) => {
+        console.error('Kanban ideas error:', error);
       }
-    });
+    );
 
     return () => { unsubStreams(); unsubIdeas(); };
   }, []);
@@ -94,10 +112,13 @@ export const KanbanPage = () => {
     setDragId(null);
   };
 
-  const handleDeleteIdea = async (id: string) => {
-    setIdeas((prev) => prev.filter((n) => n.id !== id));
+  const handleDeleteIdeaConfirm = async () => {
+    if (!confirmDeleteIdeaId) return;
+    if (selectedIdeaId === confirmDeleteIdeaId) setSelectedIdeaId(null);
+    setIdeas((prev) => prev.filter((n) => n.id !== confirmDeleteIdeaId));
+    setConfirmDeleteIdeaId(null);
     try {
-      await deleteIdea(id);
+      await deleteIdea(confirmDeleteIdeaId);
     } catch {
       toast.error('Failed to delete idea');
     }
@@ -185,13 +206,13 @@ export const KanbanPage = () => {
   const toggle = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   if (loading) {
-    return <div className="text-center text-slate-500 py-12">Loading...</div>;
+    return <div className="text-center text-brand-muted py-12">Loading...</div>;
   }
 
   return (
     <div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <h1 className="font-mono text-2xl font-bold">Kanban</h1>
+        <h1 className="font-heading text-2xl">Kanban</h1>
         <Button onClick={() => setModalType('idea')}>
           <PlusIcon /> Nuova Idea
         </Button>
@@ -221,7 +242,7 @@ export const KanbanPage = () => {
         isOpen={modalType === 'stream'}
         onClose={() => setModalType(null)}
         onAdd={async (name, leader) => {
-          const newStream: Stream = { id: `s${Date.now()}`, name, leader, substreams: [] };
+          const newStream: Stream = { id: `s_${crypto.randomUUID()}`, name, leader, substreams: [] };
           setStreams((prev) => [...prev, newStream]);
           try {
             await saveStream(newStream);
@@ -239,7 +260,7 @@ export const KanbanPage = () => {
           if (!substreamParent) return;
           const updated = streams.map((s) =>
             s.id === substreamParent
-              ? { ...s, substreams: [...s.substreams, { id: `ss${Date.now()}`, name, leader: leader || '[NOME]' }] }
+              ? { ...s, substreams: [...s.substreams, { id: `ss_${crypto.randomUUID()}`, name, leader: leader || '[NOME]' }] }
               : s
           );
           setStreams(updated);
@@ -260,13 +281,13 @@ export const KanbanPage = () => {
         <div className="min-w-[1200px]">
           {/* Headers */}
           <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
-            <div className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <div className="px-3 py-2 text-[10px] font-bold text-brand-muted uppercase tracking-widest">
               Stream / Substream
             </div>
             {KANBAN_COLUMNS.map((col) => (
               <div
                 key={col.id}
-                className="px-2 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-t-lg"
+                className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider rounded-t-sm"
                 style={{ color: col.color, background: col.bg, borderBottom: `3px solid ${col.color}` }}
               >
                 {col.label}
@@ -284,16 +305,16 @@ export const KanbanPage = () => {
               <div key={st.id} className="mb-1.5">
                 {/* Stream row */}
                 <div className="grid gap-1" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
-                  <div className="p-3 bg-primary-500/10 rounded-lg border-l-4 border-primary-500 flex items-center gap-2">
+                  <div className="p-3 bg-brand-gold/10 rounded-sm border-l-4 border-brand-gold flex items-center gap-2">
                     {hasSubs && (
-                      <button onClick={() => toggle(st.id)} className="text-primary-300 p-0.5">
+                      <button onClick={() => toggle(st.id)} className="text-brand-gold p-0.5">
                         {isCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
                       </button>
                     )}
                     {!hasSubs && <div className="w-[18px]" />}
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm truncate">{st.name}</div>
-                      <div className="text-xs text-primary-300">{st.leader}</div>
+                      <div className="font-bold text-sm text-brand-title truncate">{st.name}</div>
+                      <div className="text-xs text-brand-gold">{st.leader}</div>
                     </div>
                     <Button
                       size="sm"
@@ -318,13 +339,14 @@ export const KanbanPage = () => {
                       items={directIdeas.filter((n) => n.col === col.id)}
                       onDrop={(e) => handleDrop(e, col.id, st.id, null)}
                       onDragStart={handleDragStart}
-                      onDelete={handleDeleteIdea}
-                      onEdit={() => setModalType('editIdea')}
+                      onDelete={setConfirmDeleteIdeaId}
+                      onSelect={(id) => setSelectedIdeaId((prev) => prev === id ? null : id)}
+                      selectedId={selectedIdeaId}
                       dragId={dragId}
                     />
                   ))}
                   {hasSubs && KANBAN_COLUMNS.map((col) => (
-                    <div key={col.id} className="bg-primary-500/5 rounded min-h-[12px]" />
+                    <div key={col.id} className="bg-brand-gold/5 rounded-sm min-h-[12px]" />
                   ))}
                 </div>
 
@@ -333,15 +355,15 @@ export const KanbanPage = () => {
                   const ssIdeas = ideas.filter((n) => n.substreamId === ss.id);
                   return (
                     <div key={ss.id} className="grid gap-1 mt-0.5" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
-                      <div className="p-2 pl-10 bg-slate-800/40 rounded-md border-l-4 border-primary-500/25 flex items-center gap-2">
-                        <span className="text-[10px] text-slate-600 leading-none">└</span>
+                      <div className="p-2 pl-10 bg-brand-ice rounded-sm border-l-4 border-gray-200 flex items-center gap-2">
+                        <span className="text-[10px] text-brand-muted leading-none">└</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-slate-300 truncate">{ss.name}</div>
+                          <div className="text-xs font-semibold text-brand-body truncate">{ss.name}</div>
                           <input
                             value={ss.leader}
                             onChange={(e) => handleUpdateSubstreamLeaderLocal(st.id, ss.id, e.target.value)}
                             onBlur={() => handleSaveSubstreamLeader(st.id)}
-                            className="bg-transparent border-b border-dashed border-primary-500/20 text-[10px] text-primary-300 py-0.5 w-24 outline-none focus:border-primary-500/50"
+                            className="bg-transparent border-b border-dashed border-brand-gold/20 text-[10px] text-brand-gold py-0.5 w-24 outline-none focus:border-brand-gold/50"
                             placeholder="[NOME]"
                           />
                         </div>
@@ -361,8 +383,9 @@ export const KanbanPage = () => {
                           items={ssIdeas.filter((n) => n.col === col.id)}
                           onDrop={(e) => handleDrop(e, col.id, st.id, ss.id)}
                           onDragStart={handleDragStart}
-                          onDelete={handleDeleteIdea}
-                          onEdit={() => setModalType('editIdea')}
+                          onDelete={setConfirmDeleteIdeaId}
+                              onSelect={(id) => setSelectedIdeaId((prev) => prev === id ? null : id)}
+                          selectedId={selectedIdeaId}
                           dragId={dragId}
                         />
                       ))}
@@ -376,14 +399,102 @@ export const KanbanPage = () => {
       </div>
 
       {/* Legend */}
-      <div className="flex gap-4 flex-wrap mt-3 p-3 bg-slate-800/40 rounded-xl">
+      <div className="flex gap-4 flex-wrap mt-3 p-3 bg-brand-ice rounded-sm">
         {KANBAN_COLUMNS.map((col) => (
-          <div key={col.id} className="flex items-center gap-2 text-xs text-slate-400">
-            <div className="w-3 h-3 rounded" style={{ background: col.color }} />
+          <div key={col.id} className="flex items-center gap-2 text-xs text-brand-muted">
+            <div className="w-3 h-3 rounded-sm" style={{ background: col.color }} />
             {col.label}
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteIdeaId}
+        title="Eliminare questa idea?"
+        message="Questa azione non può essere annullata."
+        onConfirm={handleDeleteIdeaConfirm}
+        onCancel={() => setConfirmDeleteIdeaId(null)}
+      />
+
+      {/* Idea Detail Panel */}
+      {selectedIdeaId && (() => {
+        const idea = ideas.find((i) => i.id === selectedIdeaId);
+        if (!idea) return null;
+        const stream = streams.find((s) => s.id === idea.streamId);
+        const substream = stream?.substreams.find((ss) => ss.id === idea.substreamId);
+        const column = KANBAN_COLUMNS.find((c) => c.id === idea.col);
+        return (
+          <div ref={detailRef} className="mt-6 border border-gray-200 rounded-sm bg-brand-surface animate-fade-in scroll-mt-6">
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-mono text-brand-muted">#{idea.ideaId}</span>
+                <h2 className="font-heading text-base text-brand-title">{idea.text}</h2>
+                {column && (
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm"
+                    style={{ background: column.bg, color: column.color, border: `1px solid ${column.color}40` }}
+                  >
+                    {column.label}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedIdeaId(null)}
+                className="text-brand-muted hover:text-brand-body p-1 transition-colors"
+                title="Chiudi"
+              >
+                <XIcon size={16} />
+              </button>
+            </div>
+
+            {/* Panel body */}
+            <div className="p-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {/* Stream / Substream */}
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-brand-muted mb-1">Stream</div>
+                <div className="text-sm text-brand-body">
+                  {stream?.name ?? '—'}
+                  {substream && (
+                    <span className="text-brand-muted"> › {substream.name}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {idea.description && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-brand-muted mb-1">Descrizione</div>
+                  <div className="text-sm text-brand-body">{idea.description}</div>
+                </div>
+              )}
+
+              {/* AS IS */}
+              {idea.partenza && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-brand-muted mb-1">AS IS — Punto di partenza</div>
+                  <div className="text-sm text-brand-body whitespace-pre-wrap">{idea.partenza}</div>
+                </div>
+              )}
+
+              {/* TO BE */}
+              {idea.arrivo && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-brand-muted mb-1">TO BE — Punto d'arrivo</div>
+                  <div className="text-sm text-brand-body whitespace-pre-wrap">{idea.arrivo}</div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!idea.description && !idea.partenza && !idea.arrivo && (
+                <div className="sm:col-span-2 text-brand-muted text-sm italic">
+                  Nessun dettaglio aggiunto per questa idea.
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
@@ -395,11 +506,12 @@ interface KanbanCellProps {
   onDrop: (e: React.DragEvent) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: () => void;
+  onSelect: (id: string) => void;
+  selectedId: string | null;
   dragId: string | null;
 }
 
-const KanbanCell = ({ col, items, onDrop, onDragStart, onDelete, onEdit, dragId }: KanbanCellProps) => {
+const KanbanCell = ({ col, items, onDrop, onDragStart, onDelete, onSelect, selectedId, dragId }: KanbanCellProps) => {
   const [isOver, setIsOver] = useState(false);
 
   return (
@@ -408,8 +520,8 @@ const KanbanCell = ({ col, items, onDrop, onDragStart, onDelete, onEdit, dragId 
       onDrop={(e) => { onDrop(e); setIsOver(false); }}
       onDragEnter={() => setIsOver(true)}
       onDragLeave={() => setIsOver(false)}
-      className={`rounded-md p-1.5 min-h-[44px] flex flex-col gap-1 transition-colors ${
-        isOver ? 'bg-primary-500/10' : 'bg-slate-900/25'
+      className={`rounded-sm p-1.5 min-h-[44px] flex flex-col gap-1 transition-colors ${
+        isOver ? 'bg-brand-gold/10' : 'bg-brand-ice/50'
       }`}
     >
       {items.map((p) => (
@@ -417,19 +529,20 @@ const KanbanCell = ({ col, items, onDrop, onDragStart, onDelete, onEdit, dragId 
           key={p.id}
           draggable
           onDragStart={(e) => onDragStart(e, p.id)}
-          className={`px-2 py-1.5 rounded text-xs font-semibold cursor-grab relative shadow-md hover:scale-105 hover:-rotate-1 transition-transform ${
+          onClick={() => onSelect(p.id)}
+          className={`px-2 py-1.5 rounded-sm text-xs font-semibold cursor-pointer relative shadow-sm hover:scale-105 hover:-rotate-1 transition-transform ${
             dragId === p.id ? 'opacity-40' : ''
           }`}
-          style={{ background: col.color, color: '#1E293B', paddingRight: '38px' }}
+          style={{
+            background: col.color,
+            color: '#1E293B',
+            paddingRight: '28px',
+            outline: selectedId === p.id ? '2px solid rgba(255,255,255,0.7)' : 'none',
+            outlineOffset: '1px',
+          }}
         >
           {p.text}
-          <div className="absolute top-1 right-1 flex gap-0.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              className="bg-black/10 rounded p-0.5"
-            >
-              <EditIcon size={12} />
-            </button>
+          <div className="absolute top-1 right-1">
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
               className="bg-black/10 rounded p-0.5"
@@ -486,7 +599,7 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
 
     const t = targets[targetIdx];
     onAdd({
-      id: `n${Date.now()}`,
+      id: `n_${crypto.randomUUID()}`,
       ideaId: nid,
       text: name.trim(),
       description: desc.trim(),
@@ -500,9 +613,9 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="💡 Nuova Idea" maxWidth="max-w-xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Nuova Idea" maxWidth="max-w-xl">
       {error && (
-        <div className="bg-red-500/15 border border-red-500/30 rounded-lg px-3 py-2 mb-3 text-xs text-red-400">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-sm px-3 py-2 mb-3 text-xs text-red-500">
           {error}
         </div>
       )}
@@ -623,7 +736,7 @@ const SubstreamModal = ({ isOpen, onClose, onAdd }: StreamModalProps) => {
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+  <label className="block text-[10px] text-brand-muted uppercase tracking-wider mb-1">
     {children}
   </label>
 );

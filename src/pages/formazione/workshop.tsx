@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Textarea } from '../../components/ui';
+import { Button, Input, Textarea, ConfirmDialog } from '../../components/ui';
 import { PlusIcon, TrashIcon } from '../../components/icons';
 import { subscribeToWorkshops, saveWorkshop, deleteWorkshop } from '../../services/firestore';
 import type { Workshop } from '../../types';
@@ -12,6 +12,7 @@ const INITIAL_WORKSHOPS: Workshop[] = [
 export const WorkshopPage = () => {
   const [data, setData] = useState<Workshop[]>(INITIAL_WORKSHOPS);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(false);
@@ -40,10 +41,12 @@ export const WorkshopPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setData((prev) => prev.filter((row) => row.id !== id));
+  const handleDeleteConfirm = async () => {
+    if (!confirmDeleteId) return;
+    setData((prev) => prev.filter((row) => row.id !== confirmDeleteId));
+    setConfirmDeleteId(null);
     try {
-      await deleteWorkshop(id);
+      await deleteWorkshop(confirmDeleteId);
     } catch {
       toast.error('Failed to delete workshop');
     }
@@ -51,7 +54,7 @@ export const WorkshopPage = () => {
 
   const handleAdd = () => {
     const newWorkshop: Workshop = {
-      id: `w${Date.now()}`,
+      id: `w_${crypto.randomUUID()}`,
       date: '',
       topic: '',
       leader: '',
@@ -61,24 +64,24 @@ export const WorkshopPage = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-slate-500 py-12">Loading...</div>;
+    return <div className="text-center text-brand-muted py-12">Loading...</div>;
   }
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-mono text-2xl font-bold mb-3">🧪 Workshop AI</h1>
-      <p className="text-slate-400 text-sm leading-relaxed mb-7 max-w-3xl">
+      <h1 className="font-heading text-2xl mb-3">Workshop AI</h1>
+      <p className="text-brand-muted text-sm leading-relaxed mb-7 max-w-3xl">
         Sessioni di un'ora e mezza ogni sei settimane, condotte da referenti interni, per deep dive su argomenti specifici.
       </p>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-primary-500/20">
+            <tr className="border-b border-gray-200">
               {['Data', 'Argomento', 'Leader', 'Notes', ''].map((h) => (
                 <th
                   key={h}
-                  className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-primary-300 bg-primary-500/10"
+                  className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5"
                 >
                   {h}
                 </th>
@@ -87,7 +90,7 @@ export const WorkshopPage = () => {
           </thead>
           <tbody>
             {data.map((row) => (
-              <tr key={row.id} className="border-b border-slate-700/50 hover:bg-primary-500/5">
+              <tr key={row.id} className="border-b border-gray-100 hover:bg-brand-ice">
                 <td className="p-2">
                   <Input
                     value={row.date}
@@ -124,7 +127,7 @@ export const WorkshopPage = () => {
                 <td className="p-2">
                   <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleDelete(row.id)}
+                    onClick={() => setConfirmDeleteId(row.id)}
                     className="text-red-500/50 hover:text-red-500 p-2"
                   >
                     <TrashIcon />
@@ -139,6 +142,14 @@ export const WorkshopPage = () => {
       <Button onClick={handleAdd} className="mt-4">
         <PlusIcon /> Aggiungi riga
       </Button>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        title="Eliminare questo workshop?"
+        message="Questa azione non può essere annullata."
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

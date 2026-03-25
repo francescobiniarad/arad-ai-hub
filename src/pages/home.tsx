@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Modal, Button, Input, Textarea, Select } from '../components/ui';
 import { BeakerIcon, GraduationCapIcon, RocketIcon } from '../components/icons';
-import { subscribeToStreams, saveProposal, subscribeToProposals } from '../services/firestore';
+import { subscribeToStreams, saveProposal } from '../services/firestore';
 import { useAuth } from '../context/auth-context';
-import type { Stream, Proposal } from '../types';
+import type { Stream } from '../types';
 import toast from 'react-hot-toast';
 
 const cards = [
@@ -48,28 +48,18 @@ const EMPTY_FORM = {
 export const HomePage = () => {
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
-  const [showProposte, setShowProposte] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [streams, setStreams] = useState<Stream[]>([]);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
 
   useEffect(() => {
-    const unsub1 = subscribeToStreams(setStreams);
-    const unsub2 = subscribeToProposals(setProposals);
-    return () => { unsub1(); unsub2(); };
+    return subscribeToStreams(setStreams);
   }, []);
 
   useEffect(() => {
     const handler = () => setShowModal(true);
     window.addEventListener('open-proponi', handler);
     return () => window.removeEventListener('open-proponi', handler);
-  }, []);
-
-  useEffect(() => {
-    const handler = () => setShowProposte(true);
-    window.addEventListener('open-proposte', handler);
-    return () => window.removeEventListener('open-proposte', handler);
   }, []);
 
   const handleClose = () => {
@@ -107,10 +97,10 @@ export const HomePage = () => {
   return (
     <div className="pt-12 animate-fade-in">
       <div className="text-center mb-14">
-        <h1 className="font-mono text-4xl md:text-5xl font-bold tracking-tight mb-3 bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        <h1 className="font-heading text-4xl md:text-5xl mb-3">
           ARAD Digital AI Hub
         </h1>
-        <p className="text-slate-500 text-base max-w-md mx-auto">
+        <p className="text-brand-muted text-base max-w-md mx-auto">
           Centro di comando interno per il tracking di tutte le iniziative AI.
         </p>
       </div>
@@ -118,69 +108,22 @@ export const HomePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {cards.map((card, index) => (
           <Link key={card.id} to={card.path}>
-            <Card
-              hoverable
-              gradient={card.gradient}
-              className="h-full"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
+            <Card hoverable gradient={card.gradient} className="h-full" style={{ animationDelay: `${index * 100}ms` }}>
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mb-5 text-white"
+                className="w-14 h-14 rounded-sm flex items-center justify-center mb-5 text-white"
                 style={{ background: card.gradient }}
               >
                 {card.icon}
               </div>
-              <h2 className="font-mono text-xl font-bold mb-2">{card.label}</h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                {card.desc}
-              </p>
+              <h2 className="font-heading text-lg mb-2">{card.label}</h2>
+              <p className="text-brand-muted text-sm leading-relaxed">{card.desc}</p>
             </Card>
           </Link>
         ))}
       </div>
 
-      <Modal isOpen={showProposte} onClose={() => setShowProposte(false)} title="📋 Proposte" maxWidth="max-w-6xl">
-        {proposals.length === 0 ? (
-          <p className="text-slate-500 text-sm text-center py-8">Nessuna proposta ancora ricevuta.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-primary-500/20">
-                  {['Titolo', 'Descrizione', 'Perché', 'AS IS', 'TO BE', 'Stream', 'ROI', 'Tipologia', 'Data'].map((h) => (
-                    <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-primary-300 bg-primary-500/10 whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {proposals.map((p) => {
-                  const stream = streams.find((s) => s.id === p.streamId);
-                  return (
-                    <tr key={p.id} className="border-b border-slate-700/50 hover:bg-primary-500/5 align-top">
-                      <td className="px-3 py-2 font-medium text-slate-200 min-w-[120px]">{p.titolo}</td>
-                      <td className="px-3 py-2 text-slate-400 min-w-[150px] max-w-[180px]">{p.descrizione}</td>
-                      <td className="px-3 py-2 text-slate-400 min-w-[130px] max-w-[160px]">{p.perche}</td>
-                      <td className="px-3 py-2 text-slate-400 min-w-[130px] max-w-[160px]">{p.asIs}</td>
-                      <td className="px-3 py-2 text-slate-400 min-w-[130px] max-w-[160px]">{p.toBe}</td>
-                      <td className="px-3 py-2 text-slate-400 whitespace-nowrap">{stream?.name || '—'}</td>
-                      <td className="px-3 py-2 text-slate-400 min-w-[130px] max-w-[160px]">{p.roi}</td>
-                      <td className="px-3 py-2 text-slate-400 whitespace-nowrap capitalize">{p.tipologia || '—'}</td>
-                      <td className="px-3 py-2 text-slate-500 whitespace-nowrap text-xs">
-                        {p.createdAt ? p.createdAt.toLocaleDateString('it-IT') : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Modal>
-
-      <Modal isOpen={showModal} onClose={handleClose} title="💡 Proponi un'idea" maxWidth="max-w-xl">
-        {/* Same style as IdeaModal in kanban */}
+      {/* Proponi un'idea modal */}
+      <Modal isOpen={showModal} onClose={handleClose} title="Proponi un'idea" maxWidth="max-w-xl">
         <div className="space-y-3">
           <div>
             <Label>Titolo idea *</Label>
@@ -241,7 +184,7 @@ export const HomePage = () => {
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+  <label className="block text-[10px] text-brand-muted uppercase tracking-wider mb-1">
     {children}
   </label>
 );

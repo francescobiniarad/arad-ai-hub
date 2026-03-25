@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Textarea } from '../../components/ui';
+import { Button, Input, Textarea, ConfirmDialog } from '../../components/ui';
 import { PlusIcon, TrashIcon } from '../../components/icons';
 import { subscribeToCertifications, saveCertification, deleteCertification } from '../../services/firestore';
 import type { Certification } from '../../types';
@@ -16,6 +16,7 @@ const INITIAL_CERTS: Certification[] = [
 export const CertificazioniPage = () => {
   const [data, setData] = useState<Certification[]>(INITIAL_CERTS);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(false); // Show initial data immediately
@@ -44,10 +45,12 @@ export const CertificazioniPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setData((prev) => prev.filter((row) => row.id !== id));
+  const handleDeleteConfirm = async () => {
+    if (!confirmDeleteId) return;
+    setData((prev) => prev.filter((row) => row.id !== confirmDeleteId));
+    setConfirmDeleteId(null);
     try {
-      await deleteCertification(id);
+      await deleteCertification(confirmDeleteId);
     } catch {
       toast.error('Failed to delete certification');
     }
@@ -55,7 +58,7 @@ export const CertificazioniPage = () => {
 
   const handleAdd = () => {
     const newCert: Certification = {
-      id: `c${Date.now()}`,
+      id: `c_${crypto.randomUUID()}`,
       name: '',
       provider: '',
       description: '',
@@ -66,24 +69,24 @@ export const CertificazioniPage = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-slate-500 py-12">Loading...</div>;
+    return <div className="text-center text-brand-muted py-12">Loading...</div>;
   }
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-mono text-2xl font-bold mb-3">🎓 Certificazioni AI</h1>
-      <p className="text-slate-400 text-sm leading-relaxed mb-7 max-w-3xl">
+      <h1 className="font-heading text-2xl mb-3">Certificazioni AI</h1>
+      <p className="text-brand-muted text-sm leading-relaxed mb-7 max-w-3xl">
         Il team prenderà parte alle certificazioni AI offerte da Google, proposte in base al livello e al ruolo. Costo sostenuto da ARAD. Ognuno procederà in autonomia.
       </p>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-primary-500/20">
+            <tr className="border-b border-gray-200">
               {['Certificazione', 'Provider', 'Descrizione', 'Livello', 'Partecipanti', ''].map((h) => (
                 <th
                   key={h}
-                  className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-primary-300 bg-primary-500/10"
+                  className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5"
                 >
                   {h}
                 </th>
@@ -92,7 +95,7 @@ export const CertificazioniPage = () => {
           </thead>
           <tbody>
             {data.map((row) => (
-              <tr key={row.id} className="border-b border-slate-700/50 hover:bg-primary-500/5">
+              <tr key={row.id} className="border-b border-gray-100 hover:bg-brand-ice">
                 <td className="p-2">
                   <Input
                     value={row.name}
@@ -138,7 +141,7 @@ export const CertificazioniPage = () => {
                 <td className="p-2">
                   <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleDelete(row.id)}
+                    onClick={() => setConfirmDeleteId(row.id)}
                     className="text-red-500/50 hover:text-red-500 p-2"
                   >
                     <TrashIcon />
@@ -153,6 +156,14 @@ export const CertificazioniPage = () => {
       <Button onClick={handleAdd} className="mt-4">
         <PlusIcon /> Aggiungi riga
       </Button>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        title="Eliminare questa certificazione?"
+        message="Questa azione non può essere annullata."
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { Button, Modal, Input, Textarea, Select } from '../../components/ui';
+import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui';
 import { PlusIcon, TrashIcon } from '../../components/icons';
 import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
@@ -35,33 +35,43 @@ export const TabellaPage = () => {
   const [ideas, setIdeas] = useState<Idea[]>(INITIAL_IDEAS);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     let seeded = false;
+    setLoading(false); // Show initial data immediately; Firestore data replaces it on arrival
 
-    const unsubStreams = subscribeToStreams(async (data) => {
-      if (data.length > 0) {
-        setStreams(data);
-      } else if (!seeded) {
-        // Firestore is empty - seed with initial data
-        seeded = true;
-        for (const stream of INITIAL_STREAMS) {
-          await saveStream(stream);
+    const unsubStreams = subscribeToStreams(
+      async (data) => {
+        if (data.length > 0) {
+          setStreams(data);
+        } else if (!seeded) {
+          seeded = true;
+          for (const stream of INITIAL_STREAMS) {
+            await saveStream(stream);
+          }
         }
+      },
+      (error) => {
+        console.error('Tabella streams error:', error);
+        toast.error('Errore nel caricamento degli stream');
       }
-      setLoading(false);
-    });
+    );
 
-    const unsubIdeas = subscribeToIdeas(async (data) => {
-      if (data.length > 0) {
-        setIdeas(data);
-      } else if (!seeded) {
-        // Firestore is empty - seed with initial ideas
-        for (const idea of INITIAL_IDEAS) {
-          await saveIdea(idea);
+    const unsubIdeas = subscribeToIdeas(
+      async (data) => {
+        if (data.length > 0) {
+          setIdeas(data);
+        } else if (!seeded) {
+          for (const idea of INITIAL_IDEAS) {
+            await saveIdea(idea);
+          }
         }
+      },
+      (error) => {
+        console.error('Tabella ideas error:', error);
       }
-    });
+    );
 
     return () => { unsubStreams(); unsubIdeas(); };
   }, []);
@@ -96,10 +106,12 @@ export const TabellaPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setIdeas((prev) => prev.filter((r) => r.id !== id));
+  const handleDeleteConfirm = async () => {
+    if (!confirmDeleteId) return;
+    setIdeas((prev) => prev.filter((r) => r.id !== confirmDeleteId));
+    setConfirmDeleteId(null);
     try {
-      await deleteIdea(id);
+      await deleteIdea(confirmDeleteId);
     } catch {
       toast.error('Failed to delete idea');
     }
@@ -116,13 +128,13 @@ export const TabellaPage = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-slate-500 py-12">Loading...</div>;
+    return <div className="text-center text-brand-muted py-12">Loading...</div>;
   }
 
   return (
     <div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <h1 className="font-mono text-2xl font-bold">Tabella Idee</h1>
+        <h1 className="font-heading text-2xl">Tabella Idee</h1>
         <Button onClick={() => setModalOpen(true)}>
           <PlusIcon /> Nuova Idea
         </Button>
@@ -139,11 +151,11 @@ export const TabellaPage = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-primary-500/20">
+            <tr className="border-b border-gray-200">
               {['ID', 'Nome', 'Stream / Substream', 'Descrizione', 'Punto di Partenza', "Punto d'Arrivo", 'Kanban', ''].map((h) => (
                 <th
                   key={h}
-                  className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-primary-300 bg-primary-500/10"
+                  className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5"
                 >
                   {h}
                 </th>
@@ -152,8 +164,8 @@ export const TabellaPage = () => {
           </thead>
           <tbody>
             {ideas.map((r) => (
-              <tr key={r.id} className="border-b border-slate-700/30 hover:bg-primary-500/5">
-                <td className="px-3 py-2.5 font-mono font-bold text-primary-500">{r.ideaId}</td>
+              <tr key={r.id} className="border-b border-gray-100 hover:bg-brand-ice">
+                <td className="px-3 py-2.5 font-mono font-bold text-brand-gold">{r.ideaId}</td>
                 <td className="p-2">
                   <Input
                     value={r.text}
@@ -218,7 +230,7 @@ export const TabellaPage = () => {
                 <td className="p-2">
                   <button
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleDelete(r.id)}
+                    onClick={() => setConfirmDeleteId(r.id)}
                     className="text-red-500/40 hover:text-red-500 p-1"
                   >
                     <TrashIcon />
@@ -229,11 +241,19 @@ export const TabellaPage = () => {
           </tbody>
         </table>
         {ideas.length === 0 && (
-          <div className="text-center py-10 text-slate-600 italic">
+          <div className="text-center py-10 text-brand-muted italic">
             Nessuna idea ancora. Clicca "Nuova Idea" per iniziare.
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        title="Eliminare questa idea?"
+        message="Questa azione non può essere annullata."
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };
@@ -281,7 +301,7 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
 
     const t = targets[targetIdx];
     onAdd({
-      id: `n${Date.now()}`,
+      id: `n_${crypto.randomUUID()}`,
       ideaId: nid,
       text: name.trim(),
       description: desc.trim(),
@@ -295,9 +315,9 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="💡 Nuova Idea" maxWidth="max-w-xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Nuova Idea" maxWidth="max-w-xl">
       {error && (
-        <div className="bg-red-500/15 border border-red-500/30 rounded-lg px-3 py-2 mb-3 text-xs text-red-400">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-sm px-3 py-2 mb-3 text-xs text-red-500">
           {error}
         </div>
       )}
@@ -348,7 +368,7 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
 };
 
 const Label = ({ children }: { children: ReactNode }) => (
-  <label className="block text-[10px] text-slate-500 uppercase tracking-wider mb-1">
+  <label className="block text-[10px] text-brand-muted uppercase tracking-wider mb-1">
     {children}
   </label>
 );

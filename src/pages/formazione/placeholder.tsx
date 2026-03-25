@@ -7,18 +7,15 @@ interface PlaceholderPageProps {
 export const PlaceholderPage = ({ title, text, color }: PlaceholderPageProps) => {
   return (
     <div className="animate-fade-in">
-      <h1 className="font-mono text-2xl font-bold mb-3">{title}</h1>
+      <h1 className="font-heading text-2xl mb-3">{title}</h1>
       <div
-        className="rounded-2xl p-12 text-center border border-dashed"
-        style={{
-          background: 'rgba(30,41,59,0.5)',
-          borderColor: `${color}40`,
-        }}
+        className="rounded-sm p-12 text-center border border-dashed bg-brand-ice"
+        style={{ borderColor: `${color}40` }}
       >
-        <p className="text-slate-400 text-base leading-relaxed max-w-xl mx-auto">
+        <p className="text-brand-muted text-base leading-relaxed max-w-xl mx-auto">
           {text}
         </p>
-        <p className="text-slate-600 text-sm mt-5 italic">Sezione in arrivo...</p>
+        <p className="text-brand-muted/60 text-sm mt-5 italic">Sezione in arrivo...</p>
       </div>
     </div>
   );
