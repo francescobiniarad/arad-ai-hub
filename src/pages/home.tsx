@@ -105,10 +105,10 @@ export const HomePage = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        {cards.map((card, index) => (
-          <Link key={card.id} to={card.path}>
-            <Card hoverable gradient={card.gradient} className="h-full" style={{ animationDelay: `${index * 100}ms` }}>
+      <div className="flex flex-col md:flex-row justify-center items-stretch gap-6 max-w-5xl mx-auto">
+        {cards.filter((card) => card.id !== 'offering').map((card, index) => (
+          <Link key={card.id} to={card.path} className="flex md:w-80">
+            <Card hoverable gradient={card.gradient} className="h-full w-full" style={{ animationDelay: `${index * 100}ms` }}>
               <div
                 className="w-14 h-14 rounded-sm flex items-center justify-center mb-5 text-white"
                 style={{ background: card.gradient }}

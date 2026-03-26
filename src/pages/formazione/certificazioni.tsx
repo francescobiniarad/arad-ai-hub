@@ -83,7 +83,7 @@ export const CertificazioniPage = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200">
-              {['Certificazione', 'Provider', 'Descrizione', 'Livello', 'Partecipanti', ''].map((h) => (
+              {['Certificazione', 'Provider', 'Descrizione', 'Partecipanti', ''].map((h) => (
                 <th
                   key={h}
                   className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5"
@@ -121,14 +121,7 @@ export const CertificazioniPage = () => {
                     className="min-w-[200px]"
                   />
                 </td>
-                <td className="p-2">
-                  <Input
-                    value={row.level}
-                    onChange={(e) => handleUpdateLocal(row.id, 'level', e.target.value)}
-                    onBlur={() => handleSave(row.id)}
-                    className="min-w-[90px]"
-                  />
-                </td>
+
                 <td className="p-2">
                   <Textarea
                     value={row.members}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui';
-import { PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from '../../components/icons';
+import { PlusIcon, TrashIcon, XIcon } from '../../components/icons';
 import { subscribeToStreams, subscribeToIdeas, saveStream, deleteStream, saveIdea, deleteIdea } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
 import type { Stream, Idea, KanbanColumnId } from '../../types';
@@ -35,7 +35,6 @@ export const KanbanPage = () => {
   const [ideas, setIdeas] = useState<Idea[]>(INITIAL_IDEAS);
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [modalType, setModalType] = useState<'idea' | 'stream' | 'substream' | null>(null);
   const [substreamParent, setSubstreamParent] = useState<string | null>(null);
   const [confirmDeleteIdeaId, setConfirmDeleteIdeaId] = useState<string | null>(null);
@@ -124,27 +123,6 @@ export const KanbanPage = () => {
     }
   };
 
-  const handleUpdateSubstreamLeaderLocal = (streamId: string, substreamId: string, leader: string) => {
-    // Only update local state, don't save to Firestore yet
-    setStreams((prev) => prev.map((s) =>
-      s.id === streamId
-        ? { ...s, substreams: s.substreams.map((ss) => ss.id === substreamId ? { ...ss, leader } : ss) }
-        : s
-    ));
-  };
-
-  const handleSaveSubstreamLeader = async (streamId: string) => {
-    // Save the stream to Firestore when user finishes editing
-    const stream = streams.find((s) => s.id === streamId);
-    if (stream) {
-      try {
-        await saveStream(stream);
-      } catch {
-        toast.error('Failed to update leader');
-      }
-    }
-  };
-
   const handleDeleteSubstream = async (streamId: string, substreamId: string, substreamName: string) => {
     // Confirm before deleting
     const ideasCount = ideas.filter((i) => i.substreamId === substreamId).length;
@@ -203,7 +181,9 @@ export const KanbanPage = () => {
     }
   };
 
-  const toggle = (id: string) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+  const HIDDEN_STREAM_NAMES = ['arad model'];
+  const displayStreamName = (name: string) => name.toLowerCase() === 'formazione ai' ? 'Formazione' : name;
+  const visibleStreams = streams.filter((s) => !HIDDEN_STREAM_NAMES.includes(s.name.toLowerCase()));
 
   if (loading) {
     return <div className="text-center text-brand-muted py-12">Loading...</div>;
@@ -296,26 +276,18 @@ export const KanbanPage = () => {
           </div>
 
           {/* Streams */}
-          {streams.map((st) => {
-            const isCollapsed = collapsed[st.id];
+          {visibleStreams.map((st) => {
             const hasSubs = st.substreams.length > 0;
             const directIdeas = ideas.filter((n) => n.streamId === st.id && !n.substreamId);
 
             return (
               <div key={st.id} className="mb-1.5">
                 {/* Stream row */}
-                <div className="grid gap-1" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
-                  <div className="p-3 bg-brand-gold/10 rounded-sm border-l-4 border-brand-gold flex items-center gap-2">
-                    {hasSubs && (
-                      <button onClick={() => toggle(st.id)} className="text-brand-gold p-0.5">
-                        {isCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
-                      </button>
-                    )}
-                    {!hasSubs && <div className="w-[18px]" />}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm text-brand-title truncate">{st.name}</div>
-                      <div className="text-xs text-brand-gold">{st.leader}</div>
-                    </div>
+                {hasSubs ? (
+                  /* Full-width label when stream has substreams — no empty kanban cells */
+                  <div className="px-3 py-1.5 mb-0.5 bg-brand-gold/10 border-l-4 border-brand-gold flex items-center gap-2 rounded-sm">
+                    <div className="font-bold text-sm text-brand-title">{displayStreamName(st.name)}</div>
+                    <div className="flex-1" />
                     <Button
                       size="sm"
                       className="px-1.5 py-1 text-[10px]"
@@ -332,26 +304,47 @@ export const KanbanPage = () => {
                       <TrashIcon size={12} />
                     </button>
                   </div>
-                  {!hasSubs && KANBAN_COLUMNS.map((col) => (
-                    <KanbanCell
-                      key={col.id}
-                      col={col}
-                      items={directIdeas.filter((n) => n.col === col.id)}
-                      onDrop={(e) => handleDrop(e, col.id, st.id, null)}
-                      onDragStart={handleDragStart}
-                      onDelete={setConfirmDeleteIdeaId}
-                      onSelect={(id) => setSelectedIdeaId((prev) => prev === id ? null : id)}
-                      selectedId={selectedIdeaId}
-                      dragId={dragId}
-                    />
-                  ))}
-                  {hasSubs && KANBAN_COLUMNS.map((col) => (
-                    <div key={col.id} className="bg-brand-gold/5 rounded-sm min-h-[12px]" />
-                  ))}
-                </div>
+                ) : (
+                  <div className="grid gap-1" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
+                    <div className="p-3 bg-brand-gold/10 rounded-sm border-l-4 border-brand-gold flex items-center gap-2">
+                      <div className="w-[18px]" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-brand-title truncate">{displayStreamName(st.name)}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="px-1.5 py-1 text-[10px]"
+                        onClick={() => { setSubstreamParent(st.id); setModalType('substream'); }}
+                      >
+                        <PlusIcon size={12} />
+                      </Button>
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleDeleteStream(st.id, st.name)}
+                        className="text-red-500/30 hover:text-red-500 p-1 transition-colors"
+                        title="Delete stream"
+                      >
+                        <TrashIcon size={12} />
+                      </button>
+                    </div>
+                    {KANBAN_COLUMNS.map((col) => (
+                      <KanbanCell
+                        key={col.id}
+                        col={col}
+                        items={directIdeas.filter((n) => n.col === col.id)}
+                        onDrop={(e) => handleDrop(e, col.id, st.id, null)}
+                        onDragStart={handleDragStart}
+                        onDelete={setConfirmDeleteIdeaId}
+                        onSelect={(id) => setSelectedIdeaId((prev) => prev === id ? null : id)}
+                        selectedId={selectedIdeaId}
+                        dragId={dragId}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* Substream rows */}
-                {hasSubs && !isCollapsed && st.substreams.map((ss) => {
+                {hasSubs && st.substreams.map((ss) => {
                   const ssIdeas = ideas.filter((n) => n.substreamId === ss.id);
                   return (
                     <div key={ss.id} className="grid gap-1 mt-0.5" style={{ gridTemplateColumns: '260px repeat(6, 1fr)' }}>
@@ -359,13 +352,6 @@ export const KanbanPage = () => {
                         <span className="text-[10px] text-brand-muted leading-none">└</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold text-brand-body truncate">{ss.name}</div>
-                          <input
-                            value={ss.leader}
-                            onChange={(e) => handleUpdateSubstreamLeaderLocal(st.id, ss.id, e.target.value)}
-                            onBlur={() => handleSaveSubstreamLeader(st.id)}
-                            className="bg-transparent border-b border-dashed border-brand-gold/20 text-[10px] text-brand-gold py-0.5 w-24 outline-none focus:border-brand-gold/50"
-                            placeholder="[NOME]"
-                          />
                         </div>
                         <button
                           onMouseDown={(e) => e.preventDefault()}
@@ -585,10 +571,12 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
     onClose();
   };
 
-  const targets = streams.flatMap((s) => [
-    ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null, label: s.name }] : []),
-    ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id, label: `${s.name} → ${ss.name}` })),
-  ]);
+  const targets = streams
+    .filter((s) => s.name.toLowerCase() !== 'arad model')
+    .flatMap((s) => [
+      ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null, label: s.name }] : []),
+      ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id, label: `${s.name} → ${ss.name}` })),
+    ]);
 
   const handleSubmit = () => {
     if (!name.trim()) { setError('Inserisci un nome'); return; }

@@ -1,5 +1,5 @@
-import { useState, useEffect, ReactNode } from 'react';
-import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui';
+import { useState, useEffect, useRef, ReactNode } from 'react';
+import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui'; // Textarea still used in IdeaModal
 import { PlusIcon, TrashIcon } from '../../components/icons';
 import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
@@ -77,10 +77,12 @@ export const TabellaPage = () => {
   }, []);
 
   // Build targets list for stream/substream dropdown
-  const targets = streams.flatMap((s) => [
-    ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null as string | null, label: s.name }] : []),
-    ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id as string | null, label: `${s.name} → ${ss.name}` })),
-  ]);
+  const targets = streams
+    .filter((s) => s.name.toLowerCase() !== 'arad model')
+    .flatMap((s) => [
+      ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null as string | null, label: s.name }] : []),
+      ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id as string | null, label: `${s.name} → ${ss.name}` })),
+    ]);
 
   const getTargetIndex = (streamId: string, substreamId: string | null): number => {
     // Normalize empty string to null for comparison
@@ -166,12 +168,12 @@ export const TabellaPage = () => {
             {ideas.map((r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-brand-ice">
                 <td className="px-3 py-2.5 font-mono font-bold text-brand-gold">{r.ideaId}</td>
-                <td className="p-2">
-                  <Input
+                <td className="p-2 min-w-[140px]">
+                  <AutoTextarea
                     value={r.text}
                     onChange={(e) => handleUpdateLocal(r.id, 'text', e.target.value)}
                     onBlur={() => handleSave(r.id)}
-                    className="min-w-[150px] font-semibold"
+                    className="font-semibold"
                   />
                 </td>
                 <td className="p-2">
@@ -190,31 +192,25 @@ export const TabellaPage = () => {
                     {targets.map((t, i) => <option key={i} value={i}>{t.label}</option>)}
                   </Select>
                 </td>
-                <td className="p-2">
-                  <Textarea
+                <td className="p-2 min-w-[160px]">
+                  <AutoTextarea
                     value={r.description}
                     onChange={(e) => handleUpdateLocal(r.id, 'description', e.target.value)}
                     onBlur={() => handleSave(r.id)}
-                    rows={2}
-                    className="min-w-[180px]"
                   />
                 </td>
-                <td className="p-2">
-                  <Textarea
+                <td className="p-2 min-w-[160px]">
+                  <AutoTextarea
                     value={r.partenza}
                     onChange={(e) => handleUpdateLocal(r.id, 'partenza', e.target.value)}
                     onBlur={() => handleSave(r.id)}
-                    rows={2}
-                    className="min-w-[180px]"
                   />
                 </td>
-                <td className="p-2">
-                  <Textarea
+                <td className="p-2 min-w-[160px]">
+                  <AutoTextarea
                     value={r.arrivo}
                     onChange={(e) => handleUpdateLocal(r.id, 'arrivo', e.target.value)}
                     onBlur={() => handleSave(r.id)}
-                    rows={2}
-                    className="min-w-[180px]"
                   />
                 </td>
                 <td className="p-2">
@@ -364,6 +360,41 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
         <Button variant="primary" onClick={handleSubmit}>Aggiungi</Button>
       </div>
     </Modal>
+  );
+};
+
+const AutoTextarea = ({
+  value,
+  onChange,
+  onBlur,
+  className = '',
+  placeholder = '',
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onBlur: () => void;
+  className?: string;
+  placeholder?: string;
+}) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      rows={1}
+      className={`w-full bg-transparent border border-transparent hover:border-gray-200 focus:border-brand-gold/50 focus:outline-none rounded-sm px-2 py-1.5 text-sm text-brand-body resize-none overflow-hidden leading-snug transition-colors ${className}`}
+    />
   );
 };
 
