@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import { Button, Modal, Input, Textarea, Select, ConfirmDialog } from '../../components/ui'; // Textarea still used in IdeaModal
 import { PlusIcon, TrashIcon } from '../../components/icons';
-import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea } from '../../services/firestore';
+import { subscribeToStreams, subscribeToIdeas, saveStream, saveIdea, deleteIdea, subscribeToProposals, deleteProposal } from '../../services/firestore';
 import { KANBAN_COLUMNS } from '../../types';
-import type { Stream, Idea, KanbanColumnId } from '../../types';
+import type { Stream, Idea, KanbanColumnId, Proposal } from '../../types';
 import toast from 'react-hot-toast';
 
 const INITIAL_STREAMS: Stream[] = [
@@ -36,6 +36,10 @@ export const TabellaPage = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [showIdeaProposals, setShowIdeaProposals] = useState(false);
+  const [showProtoProposals, setShowProtoProposals] = useState(false);
+  const [confirmDeleteProposalId, setConfirmDeleteProposalId] = useState<string | null>(null);
 
   useEffect(() => {
     let seeded = false;
@@ -76,9 +80,12 @@ export const TabellaPage = () => {
     return () => { unsubStreams(); unsubIdeas(); };
   }, []);
 
+  useEffect(() => {
+    return subscribeToProposals(setProposals, (e) => console.error('Tabella proposals error:', e));
+  }, []);
+
   // Build targets list for stream/substream dropdown
   const targets = streams
-    .filter((s) => s.name.toLowerCase() !== 'arad model')
     .flatMap((s) => [
       ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null as string | null, label: s.name }] : []),
       ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id as string | null, label: `${s.name} → ${ss.name}` })),
@@ -135,11 +142,29 @@ export const TabellaPage = () => {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <h1 className="font-heading text-2xl">Tabella Idee</h1>
-        <Button onClick={() => setModalOpen(true)}>
-          <PlusIcon /> Nuova Idea
-        </Button>
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-2xl">Tabella Idee</h1>
+          <Button onClick={() => setModalOpen(true)}>
+            <PlusIcon /> Nuova Idea
+          </Button>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={showIdeaProposals ? 'primary' : undefined}
+            onClick={() => setShowIdeaProposals((v) => !v)}
+          >
+            💡 Proposte Idee {proposals.filter((p) => (p.proposalType || 'idea') === 'idea').length > 0 && `(${proposals.filter((p) => (p.proposalType || 'idea') === 'idea').length})`}
+          </Button>
+          <Button
+            size="sm"
+            variant={showProtoProposals ? 'primary' : undefined}
+            onClick={() => setShowProtoProposals((v) => !v)}
+          >
+            🔗 Proposte Prototipi {proposals.filter((p) => p.proposalType === 'prototype').length > 0 && `(${proposals.filter((p) => p.proposalType === 'prototype').length})`}
+          </Button>
+        </div>
       </div>
 
       <IdeaModal
@@ -149,6 +174,101 @@ export const TabellaPage = () => {
         ideas={ideas}
         onAdd={handleAdd}
       />
+
+      {/* Ideas proposals table */}
+      {showIdeaProposals && (() => {
+        const items = proposals.filter((p) => (p.proposalType || 'idea') === 'idea');
+        return (
+          <div className="mb-6 overflow-x-auto border border-brand-gold/20 rounded-sm">
+            <div className="px-3 py-2 bg-brand-gold/5 border-b border-brand-gold/20 text-[10px] font-bold text-brand-gold uppercase tracking-widest">
+              Proposte Idee
+            </div>
+            {items.length === 0 ? (
+              <p className="text-brand-muted text-sm italic p-4">Nessuna proposta idea ricevuta.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    {['Titolo', 'Descrizione', 'Perché', 'AS IS', 'TO BE', 'Stream', 'ROI', 'Tipologia', 'Email', 'Data', ''].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => {
+                    const stream = streams.find((s) => s.id === p.streamId);
+                    return (
+                      <tr key={p.id} className="border-b border-gray-100 hover:bg-brand-ice align-top">
+                        <td className="px-3 py-2 text-xs font-medium min-w-[120px]">{p.titolo || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted min-w-[140px] max-w-[200px] whitespace-pre-wrap">{p.descrizione || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.perche || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.asIs || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.toBe || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{stream?.name || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.roi || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted capitalize whitespace-nowrap">{p.tipologia || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.email || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.createdAt?.toLocaleDateString('it-IT') || '—'}</td>
+                        <td className="px-2 py-2">
+                          <button onMouseDown={(e) => e.preventDefault()} onClick={() => setConfirmDeleteProposalId(p.id)} className="text-red-500/30 hover:text-red-500 p-1 transition-colors">
+                            <TrashIcon size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Prototype proposals table */}
+      {showProtoProposals && (() => {
+        const items = proposals.filter((p) => p.proposalType === 'prototype');
+        return (
+          <div className="mb-6 overflow-x-auto border border-brand-gold/20 rounded-sm">
+            <div className="px-3 py-2 bg-brand-gold/5 border-b border-brand-gold/20 text-[10px] font-bold text-brand-gold uppercase tracking-widest">
+              Proposte Prototipi
+            </div>
+            {items.length === 0 ? (
+              <p className="text-brand-muted text-sm italic p-4">Nessuna proposta prototipo ricevuta.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    {['Link', "Cos'è", 'Descrizione', 'ROI', 'Email', 'Data', ''].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => (
+                    <tr key={p.id} className="border-b border-gray-100 hover:bg-brand-ice align-top">
+                      <td className="px-3 py-2 text-xs min-w-[140px]">
+                        {p.prototypeLink
+                          ? <a href={p.prototypeLink} target="_blank" rel="noopener noreferrer" className="text-brand-gold hover:underline break-all">↗ {p.prototypeLink}</a>
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.prototypeCosa || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[140px] max-w-[200px] whitespace-pre-wrap">{p.prototypeDescrizione || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[120px] max-w-[180px] whitespace-pre-wrap">{p.prototypeRoi || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.email || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.createdAt?.toLocaleDateString('it-IT') || '—'}</td>
+                      <td className="px-2 py-2">
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => setConfirmDeleteProposalId(p.id)} className="text-red-500/30 hover:text-red-500 p-1 transition-colors">
+                          <TrashIcon size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -249,6 +369,19 @@ export const TabellaPage = () => {
         message="Questa azione non può essere annullata."
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+      <ConfirmDialog
+        isOpen={!!confirmDeleteProposalId}
+        title="Eliminare questa proposta?"
+        message="Questa azione non può essere annullata."
+        onConfirm={async () => {
+          if (!confirmDeleteProposalId) return;
+          const id = confirmDeleteProposalId;
+          setConfirmDeleteProposalId(null);
+          setProposals((prev) => prev.filter((p) => p.id !== id));
+          await deleteProposal(id);
+        }}
+        onCancel={() => setConfirmDeleteProposalId(null)}
       />
     </div>
   );

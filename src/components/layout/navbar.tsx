@@ -64,10 +64,7 @@ export const Navbar = () => {
         {isHome && (
           <>
             <Button variant="primary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-proponi'))}>
-              Proponi un'idea
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/proposte')}>
-              Tutte le proposte
+              Proponi
             </Button>
           </>
         )}

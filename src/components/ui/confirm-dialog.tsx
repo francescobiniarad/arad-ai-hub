@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { Button } from './button';
 
 interface ConfirmDialogProps {
@@ -11,8 +12,8 @@ interface ConfirmDialogProps {
 export const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel }: ConfirmDialogProps) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
       <div className="bg-brand-surface rounded-sm border border-gray-200 shadow-2xl p-6 max-w-sm w-full">
         <h3 className="font-heading text-base mb-2">{title}</h3>
         {message && <p className="text-brand-muted text-sm mb-5">{message}</p>}
@@ -26,6 +27,7 @@ export const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel }: C
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -181,9 +181,8 @@ export const KanbanPage = () => {
     }
   };
 
-  const HIDDEN_STREAM_NAMES = ['arad model'];
   const displayStreamName = (name: string) => name.toLowerCase() === 'formazione ai' ? 'Formazione' : name;
-  const visibleStreams = streams.filter((s) => !HIDDEN_STREAM_NAMES.includes(s.name.toLowerCase()));
+  const visibleStreams = streams;
 
   if (loading) {
     return <div className="text-center text-brand-muted py-12">Loading...</div>;
@@ -572,7 +571,6 @@ const IdeaModal = ({ isOpen, onClose, streams, ideas, onAdd }: IdeaModalProps) =
   };
 
   const targets = streams
-    .filter((s) => s.name.toLowerCase() !== 'arad model')
     .flatMap((s) => [
       ...(s.substreams.length === 0 ? [{ stId: s.id, ssId: null, label: s.name }] : []),
       ...s.substreams.map((ss) => ({ stId: s.id, ssId: ss.id, label: `${s.name} → ${ss.name}` })),

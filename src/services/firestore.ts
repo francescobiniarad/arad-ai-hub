@@ -203,7 +203,18 @@ export const subscribeToPracticalSessions = (
   return onSnapshot(
     q,
     (snapshot: QuerySnapshot<DocumentData>) => {
-      const sessions = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as PracticalSession[];
+      const sessions = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          date: data.date || '',
+          topic: data.topic || '',
+          referente: data.referente || '',
+          lectureLink: data.lectureLink || '',
+          driveLink: data.driveLink || '',
+          createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : undefined,
+        } as PracticalSession;
+      });
       callback(sessions);
     },
     (error) => {
@@ -215,14 +226,19 @@ export const subscribeToPracticalSessions = (
 
 export const savePracticalSession = async (session: PracticalSession): Promise<void> => {
   const docRef = doc(db, COLLECTIONS.practicalSessions, session.id);
+  const existing = await getDoc(docRef);
   const data = {
     date: session.date,
     topic: session.topic,
     referente: session.referente,
-    theory: session.theory,
-    practice: session.practice,
+    lectureLink: session.lectureLink,
+    driveLink: session.driveLink,
   };
-  await setDoc(docRef, data, { merge: true });
+  if (existing.exists()) {
+    await setDoc(docRef, data, { merge: true });
+  } else {
+    await setDoc(docRef, { ...data, createdAt: serverTimestamp() });
+  }
 };
 
 export const deletePracticalSession = async (sessionId: string): Promise<void> => {
@@ -241,7 +257,17 @@ export const subscribeToWorkshops = (
   return onSnapshot(
     q,
     (snapshot: QuerySnapshot<DocumentData>) => {
-      const workshops = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Workshop[];
+      const workshops = snapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          date: data.date || '',
+          topic: data.topic || '',
+          leader: data.leader || '',
+          notes: data.notes || '',
+          createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : undefined,
+        } as Workshop;
+      });
       callback(workshops);
     },
     (error) => {
@@ -253,13 +279,18 @@ export const subscribeToWorkshops = (
 
 export const saveWorkshop = async (workshop: Workshop): Promise<void> => {
   const docRef = doc(db, COLLECTIONS.workshops, workshop.id);
+  const existing = await getDoc(docRef);
   const data = {
     date: workshop.date,
     topic: workshop.topic,
     leader: workshop.leader,
     notes: workshop.notes,
   };
-  await setDoc(docRef, data, { merge: true });
+  if (existing.exists()) {
+    await setDoc(docRef, data, { merge: true });
+  } else {
+    await setDoc(docRef, { ...data, createdAt: serverTimestamp() });
+  }
 };
 
 export const deleteWorkshop = async (workshopId: string): Promise<void> => {
@@ -312,10 +343,14 @@ export const saveAIOffering = async (offering: AIOffering): Promise<void> => {
 
 // Proposals
 export const saveProposal = async (proposal: Omit<Proposal, 'id' | 'createdAt'>): Promise<void> => {
-  await addDoc(collection(db, COLLECTIONS.proposals), {
-    ...proposal,
-    createdAt: serverTimestamp(),
-  });
+  const clean = Object.fromEntries(
+    Object.entries({ ...proposal, createdAt: serverTimestamp() }).filter(([, v]) => v !== undefined)
+  );
+  await addDoc(collection(db, COLLECTIONS.proposals), clean);
+};
+
+export const deleteProposal = async (proposalId: string): Promise<void> => {
+  await deleteDoc(doc(db, COLLECTIONS.proposals, proposalId));
 };
 
 export const subscribeToProposals = (
@@ -330,6 +365,10 @@ export const subscribeToProposals = (
         const data = d.data();
         return {
           id: d.id,
+          proposalType: data.proposalType || 'idea',
+          email: data.email,
+          createdAt: (data.createdAt as Timestamp)?.toDate(),
+          // Idea
           titolo: data.titolo,
           descrizione: data.descrizione,
           perche: data.perche,
@@ -338,10 +377,20 @@ export const subscribeToProposals = (
           streamId: data.streamId,
           roi: data.roi,
           tipologia: data.tipologia,
-          email: data.email,
-          createdAt: (data.createdAt as Timestamp)?.toDate(),
-        };
-      }) as Proposal[];
+          // Prototype
+          prototypeLink: data.prototypeLink,
+          prototypeCosa: data.prototypeCosa,
+          prototypeDescrizione: data.prototypeDescrizione,
+          prototypeRoi: data.prototypeRoi,
+          // Session
+          sessionTopic: data.sessionTopic,
+          sessionWhy: data.sessionWhy,
+          sessionTeoria: data.sessionTeoria,
+          sessionPratica: data.sessionPratica,
+          sessionIsPresenter: data.sessionIsPresenter,
+          sessionWhen: data.sessionWhen,
+        } as Proposal;
+      });
       callback(proposals);
     },
     (error) => {

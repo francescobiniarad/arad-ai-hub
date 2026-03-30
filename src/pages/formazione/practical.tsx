@@ -1,46 +1,58 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Textarea, ConfirmDialog } from '../../components/ui';
+import { Button, Input, ConfirmDialog } from '../../components/ui';
 import { PlusIcon, TrashIcon } from '../../components/icons';
-import { subscribeToPracticalSessions, savePracticalSession, deletePracticalSession } from '../../services/firestore';
-import type { PracticalSession } from '../../types';
+import { subscribeToPracticalSessions, savePracticalSession, deletePracticalSession, subscribeToProposals, deleteProposal } from '../../services/firestore';
+import type { PracticalSession, Proposal } from '../../types';
 import toast from 'react-hot-toast';
 
 const INITIAL_SESSIONS: PracticalSession[] = [
-  { id: 'p1', date: '13/03', topic: 'Google Sheet + Gemini', referente: '', theory: '', practice: '' },
-  { id: 'p2', date: '20/03', topic: 'Come usare NotebookLM', referente: '', theory: '', practice: '' },
-  { id: 'p3', date: '27/03', topic: 'Google Slides + Gemini', referente: '', theory: '', practice: '' },
-  { id: 'p4', date: '03/04', topic: 'Gemini + Google AI Studio + Gmail', referente: '', theory: '', practice: '' },
-  { id: 'p5', date: '10/04', topic: 'Quando come e perché usare Google AI Studio', referente: '', theory: '', practice: '' },
-  { id: 'p6', date: '17/04', topic: 'Creare interfacce su Claude', referente: '', theory: '', practice: '' },
-  { id: 'p7', date: '24/04', topic: 'Claude Skill e contract drafter', referente: '', theory: '', practice: '' },
-  { id: 'p8', date: '08/05', topic: 'Bug - costi e come usarla nel piccolo', referente: '', theory: '', practice: '' },
-  { id: 'p9', date: '15/05', topic: 'Sostituire Google Sheet con interfacce AI', referente: '', theory: '', practice: '' },
-  { id: 'p10', date: '22/05', topic: 'Sostituire Google Slides con interfacce AI', referente: '', theory: '', practice: '' },
-  { id: 'p11', date: '29/05', topic: 'Analisi dati su Claude', referente: '', theory: '', practice: '' },
-  { id: 'p12', date: '05/06', topic: "Pratiche di project management 'Summarize'", referente: '', theory: '', practice: '' },
+  { id: 'p1', date: '13/03', topic: 'Google Sheet + Gemini', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p2', date: '20/03', topic: 'Come usare NotebookLM', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p3', date: '27/03', topic: 'Google Slides + Gemini', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p4', date: '03/04', topic: 'Gemini + Google AI Studio + Gmail', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p5', date: '10/04', topic: 'Quando come e perché usare Google AI Studio', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p6', date: '17/04', topic: 'Creare interfacce su Claude', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p7', date: '24/04', topic: 'Claude Skill e contract drafter', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p8', date: '08/05', topic: 'Bug - costi e come usarla nel piccolo', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p9', date: '15/05', topic: 'Sostituire Google Sheet con interfacce AI', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p10', date: '22/05', topic: 'Sostituire Google Slides con interfacce AI', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p11', date: '29/05', topic: 'Analisi dati su Claude', referente: '', lectureLink: '', driveLink: '' },
+  { id: 'p12', date: '05/06', topic: "Pratiche di project management 'Summarize'", referente: '', lectureLink: '', driveLink: '' },
 ];
 
 export const PracticalPage = () => {
   const [data, setData] = useState<PracticalSession[]>(INITIAL_SESSIONS);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [showProposals, setShowProposals] = useState(false);
+  const [confirmDeleteProposalId, setConfirmDeleteProposalId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(false);
     const unsubscribe = subscribeToPracticalSessions((sessions) => {
       if (sessions.length > 0) {
-        setData(sessions);
+        // Sort: sessions without createdAt (existing) first, then by createdAt ascending
+        const sorted = [...sessions].sort((a, b) => {
+          if (!a.createdAt && !b.createdAt) return 0;
+          if (!a.createdAt) return -1;
+          if (!b.createdAt) return 1;
+          return a.createdAt.getTime() - b.createdAt.getTime();
+        });
+        setData(sorted);
       }
     });
     return unsubscribe;
   }, []);
 
-  // Local update only (no Firestore save)
+  useEffect(() => {
+    return subscribeToProposals(setProposals, (e) => console.error('Practical proposals error:', e));
+  }, []);
+
   const handleUpdateLocal = (id: string, field: keyof PracticalSession, value: string) => {
     setData((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  // Save to Firestore on blur
   const handleSave = async (id: string) => {
     const session = data.find((s) => s.id === id);
     if (session) {
@@ -63,16 +75,22 @@ export const PracticalPage = () => {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const newSession: PracticalSession = {
       id: `p_${crypto.randomUUID()}`,
       date: '',
       topic: '',
       referente: '',
-      theory: '',
-      practice: '',
+      lectureLink: '',
+      driveLink: '',
     };
     setData((prev) => [...prev, newSession]);
+    // Save immediately so createdAt is set — ensures new rows always go to the bottom
+    try {
+      await savePracticalSession(newSession);
+    } catch {
+      toast.error('Failed to create session');
+    }
   };
 
   if (loading) {
@@ -81,16 +99,68 @@ export const PracticalPage = () => {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="font-heading text-2xl mb-3">Practical AI</h1>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h1 className="font-heading text-2xl">Practical AI</h1>
+        <Button
+          size="sm"
+          variant={showProposals ? 'primary' : undefined}
+          onClick={() => setShowProposals((v) => !v)}
+        >
+          🎓 Proposte Practical AI {proposals.filter((p) => p.proposalType === 'practical').length > 0 && `(${proposals.filter((p) => p.proposalType === 'practical').length})`}
+        </Button>
+      </div>
       <p className="text-brand-muted text-sm leading-relaxed mb-7 max-w-3xl">
         Sessioni di 30-45 minuti settimanali. Focus: mostrare una best practice AI e testarla rapidamente insieme.
       </p>
+
+      {showProposals && (() => {
+        const items = proposals.filter((p) => p.proposalType === 'practical');
+        return (
+          <div className="mb-6 overflow-x-auto border border-brand-gold/20 rounded-sm">
+            <div className="px-3 py-2 bg-brand-gold/5 border-b border-brand-gold/20 text-[10px] font-bold text-brand-gold uppercase tracking-widest">
+              Proposte Practical AI
+            </div>
+            {items.length === 0 ? (
+              <p className="text-brand-muted text-sm italic p-4">Nessuna proposta ricevuta.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    {['Argomento', 'Perché', 'Teoria', 'Pratica', 'Vuole presentare', 'Quando', 'Email', 'Data', ''].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => (
+                    <tr key={p.id} className="border-b border-gray-100 hover:bg-brand-ice align-top">
+                      <td className="px-3 py-2 text-xs font-medium min-w-[140px]">{p.sessionTopic || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[140px] max-w-[200px] whitespace-pre-wrap">{p.sessionWhy || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[140px] max-w-[200px] whitespace-pre-wrap">{p.sessionTeoria || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted min-w-[140px] max-w-[200px] whitespace-pre-wrap">{p.sessionPratica || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.sessionIsPresenter ? 'Sì' : 'No'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.sessionWhen || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.email || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-brand-muted whitespace-nowrap">{p.createdAt?.toLocaleDateString('it-IT') || '—'}</td>
+                      <td className="px-2 py-2">
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => setConfirmDeleteProposalId(p.id)} className="text-red-500/30 hover:text-red-500 p-1 transition-colors">
+                          <TrashIcon size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200">
-              {['Data', 'Argomento', 'Referente', 'Teoria', 'Pratica', ''].map((h) => (
+              {['Data', 'Argomento', 'Referente', 'Link Lezione', 'Link Drive', ''].map((h) => (
                 <th
                   key={h}
                   className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-brand-gold bg-brand-gold/5"
@@ -127,23 +197,43 @@ export const PracticalPage = () => {
                     className="min-w-[120px]"
                   />
                 </td>
-                <td className="p-2">
-                  <Textarea
-                    value={row.theory}
-                    onChange={(e) => handleUpdateLocal(row.id, 'theory', e.target.value)}
+                <td className="p-2 min-w-[180px]">
+                  <Input
+                    value={row.lectureLink}
+                    onChange={(e) => handleUpdateLocal(row.id, 'lectureLink', e.target.value)}
                     onBlur={() => handleSave(row.id)}
-                    rows={2}
-                    className="min-w-[160px]"
+                    placeholder="Incolla link..."
+                    className="text-xs"
                   />
+                  {row.lectureLink && (
+                    <a
+                      href={row.lectureLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-gold text-[10px] hover:underline mt-0.5 block truncate"
+                    >
+                      ↗ Apri lezione
+                    </a>
+                  )}
                 </td>
-                <td className="p-2">
-                  <Textarea
-                    value={row.practice}
-                    onChange={(e) => handleUpdateLocal(row.id, 'practice', e.target.value)}
+                <td className="p-2 min-w-[180px]">
+                  <Input
+                    value={row.driveLink}
+                    onChange={(e) => handleUpdateLocal(row.id, 'driveLink', e.target.value)}
                     onBlur={() => handleSave(row.id)}
-                    rows={2}
-                    className="min-w-[160px]"
+                    placeholder="Incolla link..."
+                    className="text-xs"
                   />
+                  {row.driveLink && (
+                    <a
+                      href={row.driveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-gold text-[10px] hover:underline mt-0.5 block truncate"
+                    >
+                      ↗ Apri Drive
+                    </a>
+                  )}
                 </td>
                 <td className="p-2">
                   <button
@@ -170,6 +260,19 @@ export const PracticalPage = () => {
         message="Questa azione non può essere annullata."
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+      <ConfirmDialog
+        isOpen={!!confirmDeleteProposalId}
+        title="Eliminare questa proposta?"
+        message="Questa azione non può essere annullata."
+        onConfirm={async () => {
+          if (!confirmDeleteProposalId) return;
+          const id = confirmDeleteProposalId;
+          setConfirmDeleteProposalId(null);
+          setProposals((prev) => prev.filter((p) => p.id !== id));
+          await deleteProposal(id);
+        }}
+        onCancel={() => setConfirmDeleteProposalId(null)}
       />
     </div>
   );

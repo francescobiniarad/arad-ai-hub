@@ -54,8 +54,9 @@ export interface PracticalSession {
   date: string;
   topic: string;
   referente: string;
-  theory: string;
-  practice: string;
+  lectureLink: string;
+  driveLink: string;
+  createdAt?: Date;
 }
 
 // Workshop
@@ -65,6 +66,7 @@ export interface Workshop {
   topic: string;
   leader: string;
   notes: string;
+  createdAt?: Date;
 }
 
 // AI Offering
@@ -92,19 +94,36 @@ export interface UpdateLogEntry {
   reason?: string;
 }
 
+// Proposal types
+export type ProposalType = 'idea' | 'prototype' | 'practical' | 'workshop';
+
 // Proposal (idea submitted by any team member)
 export interface Proposal {
   id: string;
-  titolo: string;
-  descrizione: string;
-  perche: string;
-  asIs: string;
-  toBe: string;
-  streamId: string | null;
-  roi: string;
-  tipologia: string;
+  proposalType?: ProposalType; // undefined = legacy 'idea'
   email: string;
   createdAt?: Date;
+  // Idea
+  titolo?: string;
+  descrizione?: string;
+  perche?: string;
+  asIs?: string;
+  toBe?: string;
+  streamId?: string | null;
+  roi?: string;
+  tipologia?: string;
+  // Prototype
+  prototypeLink?: string;
+  prototypeCosa?: string;
+  prototypeDescrizione?: string;
+  prototypeRoi?: string;
+  // Practical AI & Workshop
+  sessionTopic?: string;
+  sessionWhy?: string;
+  sessionTeoria?: string;
+  sessionPratica?: string;
+  sessionIsPresenter?: boolean;
+  sessionWhen?: string;
 }
 
 // Materiale Utile (useful materials with links)
