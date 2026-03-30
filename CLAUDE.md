@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Last updated: March 05, 2026
+Last updated: March 30, 2026
 
 ## What This App Is
 
@@ -9,39 +9,102 @@ Internal AI Hub for ARAD Digital (~35 people). Tracks AI initiatives: offerings,
 The app is **constantly evolving** — new sections, collections, features, and cards get added regularly. Never assume this file is the complete picture. **Always read the actual codebase** to understand what currently exists.
 
 - **Live URL**: https://arad-ai-hub-330f5.web.app
-- **Local dev**: `npm run dev` (port 3000)
+- **Local dev**: `npm run dev` (port auto-assigned, usually 3000–3003)
 - **Local with emulators**: `npm run dev:emulators` + `npm run emulators` in another terminal
 - **Deploy**: `npm run deploy` (builds + deploys to Firebase Hosting)
 - **Test**: `npm test`
+- **GitHub**: https://github.com/francescobiniarad/arad-ai-hub (always commit + push before deploying)
+
+---
+
+## Current App State (as of March 30, 2026)
+
+### Pages & Routes
+
+| Route | Page | Notes |
+|-------|------|-------|
+| `/` | Home | Card grid. AI Offering card hidden (route kept). Two cards visible: R&D + Formazione AI, centered. "Proponi" button top-right opens 4-type proposal modal. |
+| `/rd` | R&D Hub | Sub-page cards: Kanban, Tabella Idee |
+| `/rd/kanban` | Kanban | All streams visible incl. ARAD Model. Leader names hidden. "Formazione AI" displays as "Formazione". Streams always expanded (no toggle). Streams with substreams: header row only, no empty kanban cells. |
+| `/rd/tabella` | Tabella Idee | Auto-resizing textareas. Proposals toggle buttons (top-right): 💡 Proposte Idee + 🔗 Proposte Prototipi |
+| `/formazione` | Formazione AI | Sub-page cards |
+| `/formazione/certificazioni` | Certificazioni | "Livello" column hidden from UI (data kept in Firestore) |
+| `/formazione/practical` | Practical AI | Columns: Data, Argomento, Referente, Link Lezione (hyperlinked), Link Drive (hyperlinked). Proposals toggle (top-right): 🎓 Proposte Practical AI |
+| `/formazione/workshop` | Workshop AI | Columns: Data, Argomento, Leader, Notes. Proposals toggle (top-right): 🏢 Proposte Workshop AI |
+| `/formazione/materiali` | Materiali Utili | — |
+| `/formazione/news` | News | — |
+| `/formazione/gamification` | Gamification | — |
+| `/offering` | AI Offering | Hidden from home, route still exists |
+| `/proposte` | Tutte le Proposte | Full list of all proposals with per-row delete |
+
+### Firestore Collections
+
+| Collection | Purpose |
+|-----------|---------|
+| `streams` | Kanban streams + substreams |
+| `ideas` | Kanban ideas (cards) |
+| `certifications` | Certifications table |
+| `practical_sessions` | Practical AI sessions. Fields: date, topic, referente, lectureLink, driveLink, createdAt (serverTimestamp on create) |
+| `workshops` | Workshop AI sessions. Fields: date, topic, leader, notes, createdAt (serverTimestamp on create) |
+| `ai_offerings` | AI Offering table |
+| `proposals` | All proposals from Proponi modal. Field: proposalType ('idea'|'prototype'|'practical'|'workshop') |
+| `materiali_utili` | Materiali Utili links |
+| `updates_log` | Audit trail — every save/delete logged with old+new values, userEmail, timestamp |
+
+### Proposal System
+
+The "Proponi" button (navbar, home page only) opens a 4-type modal:
+1. **Idea** — titolo, descrizione, perche, asIs, toBe, streamId, roi, tipologia
+2. **Prototipo** — prototypeLink, prototypeCosa, prototypeDescrizione, prototypeRoi
+3. **Practical AI** — sessionTopic, sessionWhy, sessionTeoria, sessionPratica, sessionIsPresenter (bool), sessionWhen
+4. **Workshop AI** — same fields as Practical AI
+
+All saved to `proposals` collection with `proposalType` discriminator + `email` + `createdAt`.
+
+Proposals are shown in collapsible tables on their dedicated pages (not on a separate route):
+- Tabella Idee → Proposte Idee + Proposte Prototipi
+- Practical AI → Proposte Practical AI
+- Workshop AI → Proposte Workshop AI
+
+Each proposal row is deletable via ConfirmDialog.
+
+---
 
 ## Tech Stack (stable)
 
-- React 18 + TypeScript + Tailwind CSS (dark mode default)
+- React 18 + TypeScript + Tailwind CSS
 - Firebase: Auth (Google provider, @arad.digital only), Firestore (realtime), Hosting
 - Vite for bundling
 - Fonts: DM Sans (body) + Space Mono (headings/mono)
+- `react-hot-toast` for user feedback
 
-## App Structure (evolving — always verify from code)
-
-The app has a card-based home page linking to main sections. Sections contain sub-pages with tables, Kanban boards, forms, charts, and placeholders for future features.
-
-**Before any task, read these to understand current state:**
-- `src/` directory structure → what pages/components exist now
-- Firestore service files → what collections are currently in use
-- Home page component → what top-level sections/cards exist
-- Router or navigation logic → what routes are defined
-
-Do NOT rely on any list in this file for what sections, collections, or features exist. The code is the source of truth.
+---
 
 ## File Structure
 
 ```
 src/
-├── components/     → reusable UI (tables, modals, kanban pieces, etc.)
-├── pages/          → main views (one per section/sub-section)
-├── services/       → Firebase helpers (auth.ts, firestore.ts)
-├── types/          → shared TypeScript interfaces
-public/             → static assets
+├── components/
+│   ├── layout/navbar.tsx     → sticky nav, breadcrumb, Proponi button, user avatar/logout
+│   └── ui/                   → Button, Input, Textarea, ConfirmDialog, Modal, etc.
+├── pages/
+│   ├── home.tsx              → card grid + Proponi modal (4 types)
+│   ├── proposte.tsx          → full proposals list with delete
+│   ├── rd/
+│   │   ├── kanban.tsx
+│   │   └── tabella.tsx
+│   └── formazione/
+│       ├── certificazioni.tsx
+│       ├── practical.tsx
+│       ├── workshop.tsx
+│       ├── materiali.tsx
+│       ├── news.tsx
+│       └── gamification.tsx
+├── services/
+│   ├── firebase.ts           → Firebase app init
+│   ├── auth.ts               → Google auth helpers
+│   └── firestore.ts          → all Firestore read/write functions
+└── types/index.ts            → all TypeScript interfaces
 ```
 
 ---
@@ -78,63 +141,91 @@ If any risk exists, say so BEFORE writing code.
 
 ### 4. Test More, Break Less
 
-Testing is NOT optional:
-- Write/update tests for every change, even small ones
-- Test both the new behavior AND regressions on existing features
-- Run `npm test` and `npm run build` locally and report results
-- If tests don't exist yet for the area you're changing, write them first
-- Only say "done" when all tests pass and build succeeds
+- Run `npx tsc --noEmit` and `npm run build` after every change
+- Only say "done" when build succeeds with no errors
 
 ### 5. Firebase Rules
 
-- **Always use emulators for local dev.** Never point to production during development.
-- **Never hardcode production keys or URLs in code.**
-- **Clean up Firestore listeners** — every `onSnapshot` needs an unsubscribe in the useEffect cleanup.
-- **Keep queries efficient** — use existing index patterns.
-- **Respect security rules** — all reads/writes require @arad.digital auth. Never bypass client-side.
+- **Clean up Firestore listeners** — every `onSnapshot` needs an unsubscribe in the useEffect cleanup
+- **Use onBlur for Firestore saves, NOT onChange** (see pattern below)
+- **New documents**: save `createdAt: serverTimestamp()` on creation only (check `existing.exists()` first)
+- **Respect security rules** — all reads/writes require @arad.digital auth
 
-### 6. Adding New Features / Sections / Collections
+### 6. Git + Deploy Workflow
 
-This app grows frequently. When adding something new:
-- **Read an existing similar feature first** (e.g., before adding a new table section, read how an existing table section works)
-- **Mirror the existing pattern exactly** — same component structure, same Firestore integration approach, same styling conventions
-- **Add the Firestore collection** with the same listener/save patterns already in use
-- **Add navigation** following the current routing/nav pattern
-- **Add TypeScript types** for any new data shape
-- **Update this CLAUDE.md** at the end — add a note in the "Patterns & Bug Fixes" section if you learned something new
+Always: commit → push to GitHub → then `npm run deploy`. Never deploy without committing first.
+
+If Firebase auth expires: run `firebase login --reauth` then retry deploy.
 
 ---
 
 ## Known Patterns & Bug Fixes
 
-### Use onBlur for Firestore saves, NOT onChange
-
-`onChange` fires on every keystroke → floods Firestore with writes → causes cursor jumping and data races. Always use `onBlur` to save to Firestore. Keep local state with `onChange` for responsive typing, then persist on blur.
+### onBlur for Firestore saves, NOT onChange
 
 ```tsx
-// ✅ CORRECT
-const [localVal, setLocalVal] = useState(initialVal);
-<input value={localVal} onChange={e => setLocalVal(e.target.value)} onBlur={() => saveToFirestore(localVal)} />
+// ✅ CORRECT — local state on change, save on blur
+onChange={(e) => handleUpdateLocal(row.id, 'field', e.target.value)}
+onBlur={() => handleSave(row.id)}
 
-// ❌ WRONG — causes cursor jumps and excessive writes
-<input value={val} onChange={e => saveToFirestore(e.target.value)} />
+// ❌ WRONG — floods Firestore, causes cursor jumps
+onChange={(e) => saveToFirestore(e.target.value)}
 ```
 
 ### Realtime Listeners Pattern
 
 ```tsx
 useEffect(() => {
-  const unsub = onSnapshot(collection(db, 'collectionName'), (snap) => {
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setState(data);
-  });
-  return () => unsub(); // ALWAYS clean up
+  const unsub = subscribeToX((data) => setState(data));
+  return unsub; // ALWAYS clean up
 }, []);
 ```
 
-### Error Handling
+### New Row Ordering (Practical AI / Workshop AI)
 
-Use `react-hot-toast` for user feedback. Every Firestore operation should be wrapped in try/catch.
+New rows must be saved to Firestore immediately on creation (so `createdAt` is set). Then sort client-side: rows without `createdAt` first (pre-existing), then by `createdAt` ascending. This prevents new rows from appearing in the middle due to UUID lexicographic ordering.
+
+```tsx
+const handleAdd = async () => {
+  const newItem = { id: `x_${crypto.randomUUID()}`, ... };
+  setData(prev => [...prev, newItem]);
+  await saveItem(newItem); // saves createdAt: serverTimestamp()
+};
+// sort: no createdAt first, then ascending
+.sort((a, b) => {
+  if (!a.createdAt && !b.createdAt) return 0;
+  if (!a.createdAt) return -1;
+  if (!b.createdAt) return 1;
+  return a.createdAt.getTime() - b.createdAt.getTime();
+});
+```
+
+### ConfirmDialog — Always Renders at Viewport Center
+
+`ConfirmDialog` uses `createPortal(…, document.body)` internally. This means it always renders relative to the viewport, not the page. No need to do anything special at the call site — just use `<ConfirmDialog ... />` normally. No dark backdrop (was removed intentionally).
+
+### animate-fade-in and position:fixed
+
+`position: fixed` inside a CSS-transformed parent becomes `position: absolute` relative to that parent. `animate-fade-in` previously ended with `transform: translateY(0)` which persisted via `fill-mode: forwards`, breaking all fixed-position dialogs after page scroll. Fixed by ending the animation with `transform: none` in `index.css`. Combined with portal in ConfirmDialog.
+
+### Auto-Resizing Textareas (Tabella Idee)
+
+Use a custom `AutoTextarea` component (defined inline in `tabella.tsx`) that uses `useRef` + `useEffect` to set `height = 'auto'` then `height = scrollHeight + 'px'` on value change.
+
+### Filtering undefined from Firestore writes
+
+```tsx
+const clean = Object.fromEntries(
+  Object.entries({ ...data, createdAt: serverTimestamp() }).filter(([, v]) => v !== undefined)
+);
+await addDoc(collection(db, 'proposals'), clean);
+```
+
+### Hidden Features (not deleted, just not shown)
+
+- **AI Offering**: card hidden from home page grid, route `/offering` still works
+- **Certificazioni Livello column**: hidden from UI, data still in Firestore
+- **AI Offering card on home**: removed from grid, `<AIOfferingPage />` route kept
 
 ---
 
@@ -145,15 +236,6 @@ Use `react-hot-toast` for user feedback. Every Firestore operation should be wra
 - Always type props and interfaces (TypeScript strict mode is on)
 - Tailwind utility-first; inline styles only where the original prototype uses them
 - PascalCase components, camelCase functions/variables, kebab-case files/folders
-
-## Workflow For Any Task
-
-1. **Read** — Understand what currently exists. Read the relevant files and similar features.
-2. **Plan** — List what files change and what could break. Say it out loud.
-3. **Confirm** — If there's any risk, ask before proceeding.
-4. **Implement** — Minimal changes. Follow existing patterns.
-5. **Test** — Run `npm test` and `npm run build`. Report results.
-6. **Verify** — Check the feature works in the local dev server with emulators.
 
 ---
 
